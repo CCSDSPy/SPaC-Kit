@@ -1,3 +1,5 @@
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+
 # pyDownLinkParser
 
 This library parses binary files containing CCSDS packets of various structures (APID) and distribute them in pandas dataframes.
