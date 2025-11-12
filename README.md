@@ -10,12 +10,24 @@
 - **(Scheduled Feb 2026)** – Generate documentation in multiple formats (**HTML**, **Markdown**, **reStructuredText**, **PDF**)
 - **(Scheduled Apr 2026)** – Generate simulated packets
 
-SpaC-Kit supports mission- or instrument-specific CCSDS packet structures via plugin packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
+SpaC-Kit supports mission or instrument-specific CCSDS packet structures via plugin packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
+
+> [!IMPORTANT]
+> **This library is currently in active development.**
+>
+> Some functions are placeholders and may not yet have full implementations. Expect ongoing updates and new features as the library evolves.
 
 ### 🔌 Available Plugins
 
 - [Europa Clipper CCSDS packet definitions](https://github.com/joshgarde/europa-cliper-ccsds-plugin)
 - Want to define your own CCSDS packets? [Open a ticket](https://github.com/CCSDSPy/SPaC-Kit/issues) to start the discussion.
+
+## Acknowledgments
+
+The work being done here heavily relies on the [CCSDSpy library](https://docs.ccsdspy.org/).
+It has been started as part of the NASA Europa Clipper mission Science Data System development and it is being now funded by a NASA ROSES grant.
+
+
 
 ## Users
 
