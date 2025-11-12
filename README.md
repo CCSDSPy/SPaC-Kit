@@ -1,11 +1,21 @@
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
-# pyDownLinkParser
+# SPaC-Kit
 
-This library parses binary files containing CCSDS packets of various structures (APID) and distribute them in pandas dataframes.
+## ✨ Introduction
 
-It is modular and configurable for multiple missions, but is being primarily developed for Europa-Clipper.
+**SpaC-Kit** is a collection of Python tools for working with **CCSDS Space Packet**. It can generically:
 
+- Parse data files into **Pandas DataFrames** or **Excel spreadsheets**
+- **(Scheduled Feb 2026)** – Generate documentation in multiple formats (**HTML**, **Markdown**, **reStructuredText**, **PDF**)
+- **(Scheduled Apr 2026)** – Generate simulated packets
+
+SpaC-Kit supports mission- or instrument-specific CCSDS packet structures via plugin packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
+
+### 🔌 Available Plugins
+
+- [Europa Clipper CCSDS packet definitions](https://github.com/joshgarde/europa-cliper-ccsds-plugin)
+- Want to define your own CCSDS packets? [Open a ticket](https://github.com/CCSDSPy/SPaC-Kit/issues) to start the discussion.
 
 ## Users
 
@@ -21,7 +31,15 @@ Optionnally, but recommended, create a virtual environment:
 
 ### Install
 
-    pip install pydownlinkparser
+Install you plugin library first, for example Europa-Clipper CCSDS packets definitions:
+
+    git clone https://github.com/joshgarde/europa-cliper-ccsds-plugin.git
+    cd europa-cliper-ccsds-plugin
+    pip install .
+
+Install the SPaC-Kit package:
+
+    pip install spac-kit
 
 ### Use
 
@@ -63,26 +81,27 @@ Install the package
 
 Run an example:
 
-    python src/pydownlinkparser/downlink_to_excel.py
+    python src/spa_kit/parse/downlink_to_excel.py
 
 or
 
-    parse-downlink --help
+    spac-parse --help
 
 or
 
-    parse-downlink --file ./data/ecm_mag_testcase6_cmds_split_out.log --bdsem --header
+    spac-parse --file ./data/ecm_mag_testcase6_cmds_split_out.log --bdsem --header
 
 
 #### Build and publish the package
 
 Update the version number in file `setup.cfg`
 
-Create a tag in the repostory
+Create a tag in the repository
 
 Build the project:
 
     python3 -m pip install --upgrade build
+    rm -rf dist/
     python3 -m build
 
 

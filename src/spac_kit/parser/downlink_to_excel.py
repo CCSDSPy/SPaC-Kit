@@ -4,8 +4,8 @@ import logging
 import os.path
 
 import pandas as pd
-from pydownlinkparser.parse_ccsds_downlink import parse_ccsds_file
-from pydownlinkparser.remove_non_ccsds_headers import strip_non_ccsds_headers
+from spac_kit.parser.parse_ccsds_downlink import parse_ccsds_file
+from spac_kit.parser.remove_non_ccsds_headers import strip_non_ccsds_headers
 
 logger = logging.getLogger(__name__)
 

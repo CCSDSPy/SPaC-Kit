@@ -9,7 +9,7 @@ import ccsdspy
 import crccheck
 import numpy as np
 import pandas as pd
-from pydownlinkparser.util import default_pkt
+from spac_kit.parser.util import default_pkt
 
 logger = logging.getLogger(__name__)
 

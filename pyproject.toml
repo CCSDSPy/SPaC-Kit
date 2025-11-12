@@ -1,0 +1,35 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spac_kit"
+version = "0.1.0.dev0"
+description = "Collection of Python tools for working with CCSDS Space Packets"
+authors = [
+    { name = "NASA/Caltech/JPL" }
+]
+license = { file = "LICENSE.md" }
+readme = "README.md"
+requires-python = ">=3.9,<3.10"
+keywords = ["CCSDS", "Space Packets", "Downlink", "Parser", "Documentation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering"
+]
+dependencies = [
+    "ccsdspy~=1.3.0",
+    "crccheck~=1.3.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/CCSDSPy/SPaC-Kit"
