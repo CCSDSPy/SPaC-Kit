@@ -38,7 +38,7 @@ Tested with `python 3.9`.
 Optionnally, but recommended, create a virtual environment:
 
     python3 -m venv my_virtual_env
-    sournce my_virtual_env/bin/activate
+    source my_virtual_env/bin/activate
 
 
 ### Install
@@ -55,11 +55,11 @@ Install the SPaC-Kit package:
 
 ### Use
 
-    parse-downlink --file {your ccsds file}
+    spac-parse --file {your ccsds file}
 
 See more options with:
 
-    parse-downlink --help
+    spac-parse --help
 
 
 ## Developers
