@@ -4,8 +4,8 @@ import os
 import pickle
 
 import pandas as pd
-from pydownlinkparser import parse_ccsds_file
-from pydownlinkparser import strip_non_ccsds_headers
+from spac_kit.parser import parse_ccsds_file
+from spac_kit.parser import strip_non_ccsds_headers
 
 logger = logging.getLogger(__name__)
 
