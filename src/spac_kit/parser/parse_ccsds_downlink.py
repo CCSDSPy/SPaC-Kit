@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import gc
+import inspect
 import io
 import logging
 
@@ -200,13 +201,21 @@ def import_ccsds_packet_packages():
     # TODO: use a constant for ccsds.packets
     import ccsds.packets  # noqa
 
-    def iter_namespace(ns_pkg):
-        return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+    parsers = []
 
-    return {
-        name: importlib.import_module(name)
-        for finder, name, ispkg in iter_namespace(ccsds.packets)
-    }
+    def is_ccsds_packet(attr):
+        return isinstance(attr, ccsdspy.packet_types._BasePacket)
+
+    for _, name, _ in pkgutil.walk_packages(
+        ccsds.packets.__path__, ccsds.packets.__name__ + "."
+    ):
+        module = importlib.import_module(name)
+        members = inspect.getmembers(module, is_ccsds_packet)
+        for _, member in members:
+            if hasattr(member, "apid"):
+                parsers.append(member)
+
+    return parsers
 
 
 def get_packet_definitions():
