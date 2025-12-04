@@ -33,7 +33,7 @@ It has been started as part of the NASA Europa Clipper mission Science Data Syst
 
 ### Requirement
 
-Tested with `python 3.9`.
+Tested with `python 3.13`.
 
 Optionnally, but recommended, create a virtual environment:
 
@@ -66,7 +66,7 @@ See more options with:
 
 ### Requirements
 
-#### Python 3.9
+#### Python 3.13
 
 #### Create a virtual environment
 
@@ -75,7 +75,7 @@ For example in command line:
     python3 -m venv venv
     source venv/bin/activate
 
-#### Install CCSDSPy
+#### Install the latest development version of CCSDSPy (optionnal)
 
 To install the latest version of CCSDSPy:
 
