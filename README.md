@@ -33,7 +33,7 @@ It has been started as part of the NASA Europa Clipper mission Science Data Syst
 
 ### Requirement
 
-Tested with `python 3.13`.
+Tested with `python 3.12`.
 
 Optionnally, but recommended, create a virtual environment:
 
@@ -66,7 +66,7 @@ See more options with:
 
 ### Requirements
 
-#### Python 3.13
+#### Python 3.12
 
 #### Create a virtual environment
 
@@ -119,6 +119,7 @@ Build the project:
 
 Publish the project:
 
+    pip install twine
     twine upload dist/*
 
 
