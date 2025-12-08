@@ -22,12 +22,6 @@ SpaC-Kit supports mission or instrument-specific CCSDS packet structures via plu
 - [Europa Clipper CCSDS packet definitions](https://github.com/joshgarde/europa-cliper-ccsds-plugin)
 - Want to define your own CCSDS packets? [Open a ticket](https://github.com/CCSDSPy/SPaC-Kit/issues) to start the discussion.
 
-## Acknowledgments
-
-The work being done here heavily relies on the [CCSDSpy library](https://docs.ccsdspy.org/).
-It has been started as part of the NASA Europa Clipper mission Science Data System development and it is being now funded by a NASA ROSES grant.
-
-
 
 ## Users
 
@@ -106,11 +100,16 @@ or
 
 #### Build and publish the package
 
-Update the version number in file `setup.cfg`
+Update the version number in file `pyproject.toml`
 
-Create a tag in the repository
+Create a tag in the repository and push the changes.
 
-Build the project:
+    git tag vX.Y.Z
+    git push origin main --tags
+
+TO BE DONE: the CI automation is going to mke the release on PyPI
+
+Locally, you can do the following steps to build and publish the package.
 
     python3 -m pip install --upgrade build
     rm -rf dist/
@@ -123,7 +122,16 @@ Publish the project:
     twine upload dist/*
 
 
+### Other reference information for developers
 
-## Acknowledgment
+- The package is released following [Semantic Versioning](https://semver.org/).
+- We follow the [trunk-based branching strategy](https://www.atlassian.com/continuous-delivery/continuous-integration/trunk-based-development) since the development team is current reduced and we want to favor efficient of the releases. That mean we don't have a 'develop' branch.
+- TO BE DONE: Continuous integration using GitHub Actions. It runs linting, unit test and code coverage on each Pull Request.
+- The code follows the [PEP-8](https://peps.python.org/pep-0008/) style guide using [black](https://black.readthedocs.io/en/stable/) for formatting and [flake8](https://flake8.pycqa.org/en/latest/) for linting.
 
-This package heavily relies on `ccsdspy` library (see https://github.com/CCSDSPy/ccsdspy).
+
+
+## Acknowledgments
+
+The work being done here heavily relies on the [CCSDSpy library](https://docs.ccsdspy.org/).
+It has been started as part of the NASA Europa Clipper mission Science Data System development and it is being now funded by a NASA ROSES grant.
