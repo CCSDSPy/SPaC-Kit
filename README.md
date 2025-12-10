@@ -4,11 +4,11 @@
 
 ## ✨ Introduction
 
-**SpaC-Kit** is a collection of Python tools for working with **CCSDS Space Packet**. It can generically:
+**SpaC-Kit** is a collection of Python tools for working with **CCSDS Space Packets**. It can generically:
 
-- Parse data files into **Pandas DataFrames** or **Excel spreadsheets**
-- **(Scheduled Feb 2026)** – Generate documentation in multiple formats (**HTML**, **Markdown**, **reStructuredText**, **PDF**)
-- **(Scheduled Apr 2026)** – Generate simulated packets
+- Parses data files into **Pandas DataFrames** or **Excel spreadsheets**
+- **(Scheduled Feb 2026)** – Generates documentation in multiple formats (**HTML**, **Markdown**, **reStructuredText**, **PDF**)
+- **(Scheduled Apr 2026)** – Generates simulated packets
 
 SpaC-Kit supports mission or instrument-specific CCSDS packet structures via plugin packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
 
@@ -19,7 +19,7 @@ SpaC-Kit supports mission or instrument-specific CCSDS packet structures via plu
 
 ### 🔌 Available Plugins
 
-- [Europa Clipper CCSDS packet definitions](https://github.com/joshgarde/europa-cliper-ccsds-plugin)
+- [Europa Clipper CCSDS packet definitions](https://github.com/nasa-jpl/spac-kit-europa-clipper)
 - Want to define your own CCSDS packets? [Open a ticket](https://github.com/CCSDSPy/SPaC-Kit/issues) to start the discussion.
 
 
@@ -29,7 +29,7 @@ SpaC-Kit supports mission or instrument-specific CCSDS packet structures via plu
 
 Tested with `python 3.12`.
 
-Optionnally, but recommended, create a virtual environment:
+Optionally, but recommended, create a virtual environment:
 
     python3 -m venv my_virtual_env
     source my_virtual_env/bin/activate
@@ -37,7 +37,7 @@ Optionnally, but recommended, create a virtual environment:
 
 ### Install
 
-Install you plugin library first, for example Europa-Clipper CCSDS packets definitions:
+Install your plugin library first, for example Europa-Clipper CCSDS packets definitions:
 
     git clone https://github.com/joshgarde/europa-cliper-ccsds-plugin.git
     cd europa-cliper-ccsds-plugin

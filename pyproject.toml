@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spac_kit"
-version = "0.2.2"
+version = "0.2.3"
 description = "Collection of Python tools for working with CCSDS Space Packets"
 authors = [
     { name = "NASA/Caltech/JPL" }
