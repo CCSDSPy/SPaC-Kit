@@ -80,9 +80,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.file, "rb") as f:
-        ccsds_file = strip_non_ccsds_headers(
-            f, args.bdsem, args.pkt_header, args.json_header
-        )
+        ccsds_file = strip_non_ccsds_headers(f, args.bdsem, args.pkt_header, args.json_header)
 
         # to write the content of the file without non CCSDS code
         # with open("ecm_test.bin", "wb") as f:

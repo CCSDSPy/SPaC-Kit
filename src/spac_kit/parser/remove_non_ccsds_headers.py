@@ -12,7 +12,7 @@ CCSDS_HEADER_LENGTH_BYTES = 8
 
 
 def remove_bdsem_and_message_headers(f):
-    """Removes extra headers provided by the BDSEM data generation.
+    """Remove extra headers provided by the BDSEM data generation.
 
     @param f: file handler
     @return: file handler
@@ -38,22 +38,15 @@ def remove_bdsem_and_message_headers(f):
         packet_data = bit_stream.read(packet_length * 8)
         packet_data_bytes = packet_data.tobytes()
         # read CCSDS header to double check the length of the packet
-        ccsds_packet_length = int.from_bytes(
-            packet_data_bytes[4:6], byteorder="big", signed=False
-        )
+        ccsds_packet_length = int.from_bytes(packet_data_bytes[4:6], byteorder="big", signed=False)
         if ccsds_packet_length - 1 == packet_length - CCSDS_HEADER_LENGTH_BYTES:
             buffer.write(packet_data_bytes)
         else:
-            apid = (
-                int.from_bytes(packet_data_bytes[0:2], byteorder="big", signed=False)
-                & 0b0000011111111111
-            )
-            sequence_cnt = (
-                int.from_bytes(packet_data_bytes[2:3], byteorder="big", signed=False)
-                & 0b0011111111111111
-            )
+            apid = int.from_bytes(packet_data_bytes[0:2], byteorder="big", signed=False) & 0b0000011111111111
+            sequence_cnt = int.from_bytes(packet_data_bytes[2:3], byteorder="big", signed=False) & 0b0011111111111111
             logger.warning(
-                "Skip packet apid %i, sequence count %i: length did not match with the packet length specified in the message header",
+                "Skip packet apid %i, sequence count %i: length did not match with the packet length specified "
+                "in the message header",
                 apid,
                 sequence_cnt,
             )
@@ -113,13 +106,11 @@ def remove_mise_and_headers(f):
 
 
 def start_sequence(seq):
-    """Returns True if seq is on the beginning of a marker between CCSDS packets."""
+    """Return True if seq is on the beginning of a marker between CCSDS packets."""
     return seq[1] == 0xF0 and seq[0] == seq[2] == seq[3] != 0x00
 
 
-def strip_non_ccsds_headers(
-    file_handler, is_bdsem: bool, has_pkt_header: bool, has_json_header: bool
-):
+def strip_non_ccsds_headers(file_handler, is_bdsem: bool, has_pkt_header: bool, has_json_header: bool):
     """Remove all cases of non CCSDS headers which can occur in Europa-Clipper SDS inputs, mostly in test cases.
 
     @param filename: input binary filename
