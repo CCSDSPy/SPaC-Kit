@@ -1,5 +1,6 @@
 import importlib.metadata
 import os
+import shutil
 from collections import defaultdict
 
 from ccsdspy.packet_types import _BasePacket
@@ -15,6 +16,8 @@ def setup(app):
     app.add_directive("spacdocs", SpacDocsDirective)
     app.add_config_value("spacdocs_packet_modules", [], "env")
     app.connect("builder-inited", generate_packet_stubs)
+    app.connect("config-inited", copy_static_css)
+    app.add_css_file("spac-kit.css")
     return {
         "version": importlib.metadata.version("spac_kit"),
         "parallel_read_safe": True,
@@ -32,7 +35,7 @@ def generate_packet_stubs(app):
     # You may want to make this configurable via conf.py
     PACKET_MODULES = getattr(app.config, "spacdocs_packet_modules", [])
     STUB_DIR = os.path.join(app.srcdir, "_autopackets")
-    TOCTREE_FILE = os.path.join(app.srcdir, "packet_index.rst")
+    TOCTREE_FILE = os.path.join(app.srcdir, "_packet_index.rst")
 
     logger.info("[spacdocs] generate_packet_stubs running, srcdir=%s", app.srcdir)
     logger.info("[spacdocs] PACKET_MODULES: %s", PACKET_MODULES)
@@ -131,6 +134,49 @@ def generate_packet_stubs(app):
     logger.info("[spacdocs] Done with stub generation.")
 
 
+def copy_static_css(app, _):
+    # Dynamically set html_static_path if not set
+    static_dirs = app.config.html_static_path
+    if not static_dirs:
+        app.config.html_static_path = ["_static"]
+        static_dirs = ["_static"]
+
+    static_dir = os.path.join(app.srcdir, static_dirs[0])
+
+    # Ensure the static directory exists to avoid Sphinx warning
+    os.makedirs(static_dir, exist_ok=True)
+
+    # Find the resources directory in the extension package
+    try:
+        import pkg_resources
+
+        resources_dir = pkg_resources.resource_filename(
+            "spac_kit.autodocs", "resources"
+        )
+    except Exception:
+        resources_dir = os.path.join(os.path.dirname(__file__), "resources")
+
+    if not os.path.isdir(resources_dir):
+        logger.warning(
+            f"[spacdocs] Could not find resources directory to copy: {resources_dir}"
+        )
+        return
+
+    for fname in os.listdir(resources_dir):
+        src_path = os.path.join(resources_dir, fname)
+        dest_path = os.path.join(static_dir, fname)
+        if os.path.isfile(src_path):
+            need_copy = True
+            if os.path.exists(dest_path):
+                with open(src_path, "rb") as f1, open(dest_path, "rb") as f2:
+                    if f1.read() == f2.read():
+                        need_copy = False
+
+            if need_copy:
+                shutil.copyfile(src_path, dest_path)
+                logger.info(f"[spacdocs] Copied {fname} to {dest_path}")
+
+
 class SpacDocsDirective(ObjectDescription):
     def _load_packet(self, packet_obj_name):
         module_name, var_name = packet_obj_name.rsplit(".", 1)
@@ -160,57 +206,89 @@ class SpacDocsDirective(ObjectDescription):
 
         content_node = addnodes.desc_content()
 
-        # Bullet list of internal links to each packet field section
+        # Table of all packet fields with all parameters
         if packet._fields:
-            bullet_list = nodes.bullet_list()
-            for field in packet._fields:
-                # Create a hyperlink to the anchor for each field section
-                ref_uri = f"#{field._name}"
-                ref_node = nodes.reference("", "", refuri=ref_uri)
-                ref_node += nodes.Text(field._name)
-                para = nodes.paragraph()
-                para += ref_node
-                item = nodes.list_item()
-                item += para
-                bullet_list += item
-            content_node += bullet_list
-
-        desc_node.append(content_node)
-        result.append(desc_node)
-
-        # Dedicated section for each packet field
-        for field in packet._fields:
-            section = nodes.section(ids=[field._name])
-            section += nodes.title(text=field._name)
-            field_table = nodes.table()
-            tgroup = nodes.tgroup(cols=5)
-            field_table += tgroup
-            for colwidth in [20, 20, 10, 10, 10]:
-                tgroup += nodes.colspec(colwidth=colwidth)
+            # Define all columns to show
+            columns = [
+                ("Name", "_name"),
+                ("DataType", "_data_type"),
+                ("BitLength", "_bit_length"),
+                ("BitOffset", "_bit_offset"),
+                ("ByteOrder", "_byte_order"),
+                ("FieldType", "_field_type"),
+                ("ArrayShape", "_array_shape"),
+                ("ArrayOrder", "_array_order"),
+            ]
+            fields_table = nodes.table()
+            tgroup = nodes.tgroup(cols=len(columns))
+            fields_table += tgroup
+            for _ in columns:
+                tgroup += nodes.colspec(colwidth=15)
             thead = nodes.thead()
             tgroup += thead
             header_row = nodes.row()
-            for header in ["Name", "DataType", "BitLength", "BitOffset", "ByteOrder"]:
+            for header, _ in columns:
                 entry = nodes.entry()
                 entry += nodes.paragraph(text=header)
                 header_row += entry
             thead += header_row
             tbody = nodes.tbody()
             tgroup += tbody
-            row = nodes.row()
-            for value in [
-                field._name,
-                field._data_type,
-                field._bit_length,
-                field._bit_offset,
-                field._byte_order,
-            ]:
-                entry = nodes.entry()
-                entry += nodes.paragraph(text=str(value))
-                row += entry
-            tbody += row
-            section += field_table
-            result.append(section)
+
+            # Calculate dynamic bit offsets if not set
+            running_offset = 0
+            for field in packet._fields:
+                row = nodes.row()
+                for col_idx, (col_name, attr) in enumerate(columns):
+                    entry = nodes.entry()
+                    value = getattr(field, attr, "")
+
+                    # Special handling for BitOffset column
+                    if attr == "_bit_offset":
+                        if value is None or value == "":
+                            value = running_offset
+                        else:
+                            value = int(value)
+
+                    # For Name column, add hover tooltip if _description exists
+                    if attr == "_name":
+                        desc = getattr(field, "_description", None)
+                        para = nodes.paragraph()
+                        para += nodes.Text(str(value))
+                        if desc:
+                            safe_desc = (
+                                str(desc).replace('"', "&quot;").replace("'", "&#39;")
+                            )
+                            # Inline SVG for Font Awesome info-circle (fa-info-circle)
+                            svg_icon = (
+                                '<span class="field-name-tooltip" style="margin-left:0.4em; vertical-align:middle; display:inline-block; cursor:pointer;">'
+                                '<img src="_static/info.svg" alt="info" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">'
+                                f'<span class="tooltiptext">{safe_desc}</span>'
+                                "</span>"
+                            )
+                            para += nodes.raw("", icon_html, format="html")
+                        entry += para
+                    else:
+                        # Format None as empty string
+                        if value is None:
+                            value = ""
+                        entry += nodes.paragraph(text=str(value))
+                    row += entry
+
+                # After row, increment running_offset by this field's bit length
+                try:
+                    bitlen = getattr(field, "_bit_length", 0)
+                    if bitlen is None:
+                        bitlen = 0
+                    running_offset += int(bitlen)
+                except Exception:
+                    pass
+                tbody += row
+            content_node += fields_table
+
+        desc_node.append(content_node)
+        result.append(desc_node)
+
         return result
 
     def run(self):

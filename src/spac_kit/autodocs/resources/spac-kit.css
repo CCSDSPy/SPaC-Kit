@@ -1,0 +1,43 @@
+/* Custom tooltip for packet field names */
+.field-name-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+
+.field-name-tooltip .tooltiptext {
+  visibility: hidden;
+  min-width: 180px;
+  max-width: 400px;
+  width: auto;
+  background-color: #222;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 10;
+  top: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 0.95em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  overflow: visible;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* Flip tooltip above for the last row in the table */
+tr:last-child .field-name-tooltip .tooltiptext {
+  top: auto;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.field-name-tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
