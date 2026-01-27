@@ -63,12 +63,14 @@ def generate_packet_stubs(app):
                 full_var_path = f"{modpath}.{attr_name}"
                 modpath_parts = modpath.split(".")
                 last_modpart = modpath_parts[-1] if modpath_parts else ""
+
                 # Avoid repeating the last module part if attr_name matches
                 if attr_name == last_modpart:
                     stub_name = f"{modpath.replace('.', '_')}.rst"
                 else:
                     stub_name = f"{modpath.replace('.', '_')}_{attr_name}.rst"
                 stub_path = os.path.join(STUB_DIR, stub_name)
+
                 # No toctree for fields; field listing is handled by the directive
                 stub_content = f"{attr_name}\n{'='*len(attr_name)}\n\n.. spacdocs:: {full_var_path}\n\n"
                 write_stub = True
@@ -262,11 +264,11 @@ class SpacDocsDirective(ObjectDescription):
                             # Inline SVG for Font Awesome info-circle (fa-info-circle)
                             svg_icon = (
                                 '<span class="field-name-tooltip" style="margin-left:0.4em; vertical-align:middle; display:inline-block; cursor:pointer;">'
-                                '<img src="_static/info.svg" alt="info" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">'
+                                '<img src="/_static/circle-info.svg" alt="info" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">'
                                 f'<span class="tooltiptext">{safe_desc}</span>'
                                 "</span>"
                             )
-                            para += nodes.raw("", icon_html, format="html")
+                            para += nodes.raw("", svg_icon, format="html")
                         entry += para
                     else:
                         # Format None as empty string
