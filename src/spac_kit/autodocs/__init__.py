@@ -257,13 +257,14 @@ class SpacDocsDirective(ObjectDescription):
                     entry = nodes.entry()
                     value = getattr(field, attr, "")
 
-                    # Special handling for Name column to add tooltip if description exists
+                    # Special handling for Name column
                     if attr == "_name":
                         desc = getattr(field, "_description", None)
                         para = nodes.paragraph()
                         para += nodes.Text(str(value))
 
                         if desc:
+                            # Add tooltip if description exists
                             safe_desc = (
                                 str(desc).replace('"', "&quot;").replace("'", "&#39;")
                             )
@@ -276,6 +277,9 @@ class SpacDocsDirective(ObjectDescription):
                                 "</span>"
                             )
                             para += nodes.raw("", svg_icon, format="html")
+
+                            # Also add description below the name in the section
+                            section += nodes.paragraph(text=str(desc))
 
                         entry += para
                     # Special handling for BitOffset to show calculated offset
