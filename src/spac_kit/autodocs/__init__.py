@@ -15,9 +15,12 @@ logger = logging.getLogger(__name__)
 def setup(app):
     app.add_directive("spacdocs", SpacDocsDirective)
     app.add_config_value("spacdocs_packet_modules", [], "env")
+    app.add_config_value("spacdocs_exclude_columns", [], "env")
+    app.add_css_file("spac-kit.css")
+
     app.connect("builder-inited", generate_packet_stubs)
     app.connect("config-inited", copy_static_css)
-    app.add_css_file("spac-kit.css")
+
     return {
         "version": importlib.metadata.version("spac_kit"),
         "parallel_read_safe": True,
@@ -206,28 +209,46 @@ class SpacDocsDirective(ObjectDescription):
         signature_node += type_inline
         desc_node.append(signature_node)
 
+        # Define all columns to show
+        columns = [
+            ("Name", "_name"),
+            ("DataType", "_data_type"),
+            ("BitLength", "_bit_length"),
+            ("BitOffset", "_bit_offset"),
+            ("ByteOrder", "_byte_order"),
+            ("FieldType", "_field_type"),
+            ("ArrayShape", "_array_shape"),
+            ("ArrayOrder", "_array_order"),
+        ]
+
+        # Get columns to exclude from config
+        exclude_columns = []
+        if (
+            hasattr(self, "state")
+            and hasattr(self.state, "document")
+            and hasattr(self.state.document, "settings")
+            and hasattr(self.state.document.settings, "env")
+        ):
+            env = self.state.document.settings.env
+            if hasattr(env, "config") and hasattr(
+                env.config, "spacdocs_exclude_columns"
+            ):
+                exclude_columns = env.config.spacdocs_exclude_columns or []
+
+        logger.info("[spacdocs] Excluding columns: %s", exclude_columns)
+        filtered_columns = [col[0] for col in columns if col[0] not in exclude_columns]
+        logger.info("[spacdocs] Using columns: %s", filtered_columns)
+
         content_node = addnodes.desc_content()
         field_sections = []
 
         # Table of all packet fields with all parameters, and sections for each field
         if packet._fields:
-            # Define all columns to show
-            columns = [
-                ("Name", "_name"),
-                ("DataType", "_data_type"),
-                ("BitLength", "_bit_length"),
-                ("BitOffset", "_bit_offset"),
-                ("ByteOrder", "_byte_order"),
-                ("FieldType", "_field_type"),
-                ("ArrayShape", "_array_shape"),
-                ("ArrayOrder", "_array_order"),
-            ]
-
             fields_table = nodes.table()
-            tgroup = nodes.tgroup(cols=len(columns))
+            tgroup = nodes.tgroup(cols=len(filtered_columns))
             fields_table += tgroup
 
-            for _ in columns:
+            for _ in filtered_columns:
                 tgroup += nodes.colspec(colwidth=15)
 
             # --- Build header row ---
@@ -235,7 +256,7 @@ class SpacDocsDirective(ObjectDescription):
             tgroup += thead
 
             header_row = nodes.row()
-            for header, _ in columns:
+            for header in filtered_columns:
                 entry = nodes.entry()
                 entry += nodes.paragraph(text=header)
                 header_row += entry
@@ -320,8 +341,6 @@ class SpacDocsDirective(ObjectDescription):
                                 value = value
 
                             value = str(value)
-                            entry += nodes.paragraph(text=value)
-                            section_col_value_entry += nodes.paragraph(text=value)
                         else:
                             # Format None as empty string
                             if value is None:
@@ -329,10 +348,11 @@ class SpacDocsDirective(ObjectDescription):
                             else:
                                 value = str(value)
 
-                            entry += nodes.paragraph(text=value)
-                            section_col_value_entry += nodes.paragraph(text=value)
+                        section_col_value_entry += nodes.paragraph(text=value)
+                        entry += nodes.paragraph(text=value)
 
-                    row += entry
+                    if colname not in exclude_columns:
+                        row += entry
 
                 # After row, increment running_offset by this field's bit length
                 bitlen = getattr(field, "_bit_length", 0)
