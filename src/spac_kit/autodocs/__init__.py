@@ -276,8 +276,12 @@ class SpacDocsDirective(ObjectDescription):
                     # Special handling for Name column
                     if attr == "_name":
                         desc = getattr(field, "_description", None)
+
                         para = nodes.paragraph()
-                        para += nodes.Text(str(value))
+                        # Make the field name a reference link to the section below
+                        ref_uri = f"#field-{value}"
+                        ref = nodes.reference("", str(value), refuri=ref_uri)
+                        para += ref
 
                         if desc:
                             # Add tooltip if description exists
