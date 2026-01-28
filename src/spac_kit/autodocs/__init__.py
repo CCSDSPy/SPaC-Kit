@@ -207,8 +207,9 @@ class SpacDocsDirective(ObjectDescription):
         desc_node.append(signature_node)
 
         content_node = addnodes.desc_content()
+        field_sections = []
 
-        # Table of all packet fields with all parameters
+        # Table of all packet fields with all parameters, and sections for each field
         if packet._fields:
             # Define all columns to show
             columns = [
@@ -221,46 +222,52 @@ class SpacDocsDirective(ObjectDescription):
                 ("ArrayShape", "_array_shape"),
                 ("ArrayOrder", "_array_order"),
             ]
+
             fields_table = nodes.table()
             tgroup = nodes.tgroup(cols=len(columns))
             fields_table += tgroup
+
             for _ in columns:
                 tgroup += nodes.colspec(colwidth=15)
+
+            # --- Build header row ---
             thead = nodes.thead()
             tgroup += thead
+
             header_row = nodes.row()
             for header, _ in columns:
                 entry = nodes.entry()
                 entry += nodes.paragraph(text=header)
                 header_row += entry
+
             thead += header_row
             tbody = nodes.tbody()
             tgroup += tbody
 
             # Calculate dynamic bit offsets if not set
             running_offset = 0
+
             for field in packet._fields:
+                section = nodes.section(ids=[f"field-{field._name}"])
+                section += nodes.title(text=field._name)
+
                 row = nodes.row()
-                for col_idx, (col_name, attr) in enumerate(columns):
+
+                for (colname, attr) in columns:
                     entry = nodes.entry()
                     value = getattr(field, attr, "")
 
-                    # Special handling for BitOffset column
-                    if attr == "_bit_offset":
-                        if value is None or value == "":
-                            value = running_offset
-                        else:
-                            value = int(value)
-
-                    # For Name column, add hover tooltip if _description exists
+                    # Special handling for Name column to add tooltip if description exists
                     if attr == "_name":
                         desc = getattr(field, "_description", None)
                         para = nodes.paragraph()
                         para += nodes.Text(str(value))
+
                         if desc:
                             safe_desc = (
                                 str(desc).replace('"', "&quot;").replace("'", "&#39;")
                             )
+
                             # Inline SVG for Font Awesome info-circle (fa-info-circle)
                             svg_icon = (
                                 '<span class="field-name-tooltip" style="margin-left:0.4em; vertical-align:middle; display:inline-block; cursor:pointer;">'
@@ -269,13 +276,24 @@ class SpacDocsDirective(ObjectDescription):
                                 "</span>"
                             )
                             para += nodes.raw("", svg_icon, format="html")
+
                         entry += para
+                    # Special handling for BitOffset to show calculated offset
+                    elif attr == "_bit_offset":
+                        if value is None or value == "":
+                            entry += nodes.paragraph(text=str(running_offset))
+                        else:
+                            entry += nodes.paragraph(text=str(value))
                     else:
                         # Format None as empty string
                         if value is None:
                             value = ""
                         entry += nodes.paragraph(text=str(value))
+
+                    section += nodes.paragraph(text=f"{colname}: {value}")
+
                     row += entry
+                    field_sections.append(section)
 
                 # After row, increment running_offset by this field's bit length
                 try:
@@ -286,7 +304,11 @@ class SpacDocsDirective(ObjectDescription):
                 except Exception:
                     pass
                 tbody += row
+
             content_node += fields_table
+
+            for field_section in field_sections:
+                content_node += field_section
 
         desc_node.append(content_node)
         result.append(desc_node)
