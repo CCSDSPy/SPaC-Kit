@@ -196,9 +196,9 @@ class SpacDocsDirective(ObjectDescription):
         desc_node["objtype"] = "data"
         desc_node["noindex"] = False
 
-        # if not (page_title == packet.name):
         signature_node = addnodes.desc_signature("", "")
         signature_node += addnodes.desc_name(packet.name, packet.name)
+
         # Add the type info inline after the name
         type_inline = nodes.inline(
             "", f" (Type: {type(packet).__name__})", classes=["packet-type"]
@@ -249,7 +249,23 @@ class SpacDocsDirective(ObjectDescription):
 
             for field in packet._fields:
                 section = nodes.section(ids=[f"field-{field._name}"])
+                field_sections.append(section)
                 section += nodes.title(text=field._name)
+
+                section_table = nodes.table()
+
+                section_tgroup = nodes.tgroup(cols=2)
+                section_table += section_tgroup
+
+                section_tgroup += nodes.colspec(colwidth=30)
+                section_tgroup += nodes.colspec(colwidth=70)
+
+                section_thead = nodes.thead()
+                section_tgroup += section_thead
+                section_header_row = nodes.row()
+                section_thead += section_header_row
+                section_tbody = nodes.tbody()
+                section_tgroup += section_tbody
 
                 row = nodes.row()
 
@@ -282,32 +298,46 @@ class SpacDocsDirective(ObjectDescription):
                             section += nodes.paragraph(text=str(desc))
 
                         entry += para
-                    # Special handling for BitOffset to show calculated offset
-                    elif attr == "_bit_offset":
-                        if value is None or value == "":
-                            entry += nodes.paragraph(text=str(running_offset))
-                        else:
-                            entry += nodes.paragraph(text=str(value))
                     else:
-                        # Format None as empty string
-                        if value is None:
-                            value = ""
-                        entry += nodes.paragraph(text=str(value))
+                        section_row = nodes.row()
+                        section_col_name_entry = nodes.entry()
+                        section_col_value_entry = nodes.entry()
 
-                    section += nodes.paragraph(text=f"{colname}: {value}")
+                        section_tbody += section_row
+                        section_row += section_col_name_entry
+                        section_row += section_col_value_entry
+                        section_col_name_entry += nodes.paragraph(text=colname)
+
+                        # Special handling for BitOffset to show calculated offset
+                        if attr == "_bit_offset":
+                            if value is None or value == "":
+                                value = running_offset
+                            else:
+                                value = value
+
+                            value = str(value)
+                            entry += nodes.paragraph(text=value)
+                            section_col_value_entry += nodes.paragraph(text=value)
+                        else:
+                            # Format None as empty string
+                            if value is None:
+                                value = ""
+                            else:
+                                value = str(value)
+
+                            entry += nodes.paragraph(text=value)
+                            section_col_value_entry += nodes.paragraph(text=value)
 
                     row += entry
-                    field_sections.append(section)
 
                 # After row, increment running_offset by this field's bit length
-                try:
-                    bitlen = getattr(field, "_bit_length", 0)
-                    if bitlen is None:
-                        bitlen = 0
-                    running_offset += int(bitlen)
-                except Exception:
-                    pass
+                bitlen = getattr(field, "_bit_length", 0)
+                if bitlen is None:
+                    bitlen = 0
+                running_offset += int(bitlen)
+
                 tbody += row
+                section += section_table
 
             content_node += fields_table
 
