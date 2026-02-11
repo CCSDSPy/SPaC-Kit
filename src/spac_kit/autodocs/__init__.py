@@ -2,6 +2,7 @@ import importlib.metadata
 import os
 import shutil
 from collections import defaultdict
+from collections import namedtuple
 
 from ccsdspy.packet_types import _BasePacket
 from docutils import nodes
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 def setup(app):
     app.add_directive("spacdocs", SpacDocsDirective)
     app.add_config_value("spacdocs_packet_modules", [], "env")
-    app.add_config_value("spacdocs_exclude_columns", [], "env")
     app.add_css_file("spac-kit.css")
 
     app.connect("builder-inited", generate_packet_stubs)
@@ -183,7 +183,22 @@ def copy_static_css(app, _):
 
 
 class SpacDocsDirective(ObjectDescription):
+    _Column = namedtuple("_Column", ["colname", "attr", "show_on_summary"])
+
+    # Column definitions for all field attributes
+    ALL_COLUMNS = [
+        _Column("Name", "_name", True),
+        _Column("DataType", "_data_type", True),
+        _Column("BitLength", "_bit_length", True),
+        _Column("BitOffset", "_bit_offset", True),
+        _Column("ByteOrder", "_byte_order", True),
+        _Column("FieldType", "_field_type", False),
+        _Column("ArrayShape", "_array_shape", False),
+        _Column("ArrayOrder", "_array_order", False),
+    ]
+
     def _load_packet(self, packet_obj_name):
+        """Load a packet instance from a module path."""
         module_name, var_name = packet_obj_name.rsplit(".", 1)
         module = importlib.import_module(module_name)
         packet = getattr(module, var_name, None)
@@ -191,182 +206,239 @@ class SpacDocsDirective(ObjectDescription):
             return None
         return packet
 
+    def _calculate_bit_offset(self, field, running_offset):
+        """Calculate the bit offset for a field, using running offset if not explicitly set."""
+        value = getattr(field, "_bit_offset", None)
+        if value is None or value == "":
+            return running_offset
+        return value
+
+    def _format_bit_offset(self, field, running_offset):
+        """Format the bit offset, using running offset if not explicitly set."""
+        value = self._calculate_bit_offset(field, running_offset)
+        return str(value)
+
+    def _format_data_type(self, field):
+        """Format the data type with array notation if applicable."""
+        data_type = getattr(field, "_data_type", None)
+        array_shape = getattr(field, "_array_shape", None)
+
+        if array_shape == "expand":
+            return f"{str(data_type)}[]"
+        elif isinstance(array_shape, tuple):
+            return f'{str(data_type)}[{",".join(map(str, array_shape))}]'
+        else:
+            return str(data_type)
+
+    def _format_field_value(self, field, attr):
+        """Format a generic field attribute value for display."""
+        value = getattr(field, attr, "")
+        if value is None:
+            return ""
+        return str(value)
+
+    def _get_formatted_value(self, field, attr, running_offset):
+        """Route to the appropriate formatter based on the attribute."""
+        if attr == "_data_type":
+            return self._format_data_type(field)
+        elif attr == "_bit_offset":
+            return self._format_bit_offset(field, running_offset)
+        else:
+            return self._format_field_value(field, attr)
+
+    def _create_name_entry_with_tooltip(self, field_name, description):
+        """Create a table entry for the Name column with an optional tooltip."""
+        para = nodes.paragraph()
+        ref_uri = f"#field-{field_name}"
+        ref = nodes.reference("", field_name, refuri=ref_uri)
+        para += ref
+
+        if description:
+            safe_desc = str(description).replace('"', "&quot;").replace("'", "&#39;")
+            svg_icon = (
+                '<span class="field-name-tooltip" style="margin-left:0.4em; vertical-align:middle; display:inline-block; cursor:pointer;">'
+                '<img src="/_static/circle-info.svg" alt="info" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">'
+                f'<span class="tooltiptext">{safe_desc}</span>'
+                "</span>"
+            )
+            para += nodes.raw("", svg_icon, format="html")
+
+        return para
+
+    def _create_summary_table_row(self, field, running_offset):
+        """Create a single row for the summary table."""
+        row = nodes.row()
+
+        for column in self.ALL_COLUMNS:
+            # Only add entries for columns that should be shown in summary
+            if not column.show_on_summary:
+                continue
+
+            entry = nodes.entry()
+
+            if column.attr == "_name":
+                field_name = getattr(field, column.attr, "")
+                description = getattr(field, "_description", None)
+                entry += self._create_name_entry_with_tooltip(field_name, description)
+            else:
+                value = self._get_formatted_value(field, column.attr, running_offset)
+                entry += nodes.paragraph(text=value)
+
+            row += entry
+
+        return row
+
+    def _create_detail_section_row(self, colname, value):
+        """Create a single row for a field's detail section table."""
+        section_row = nodes.row()
+        section_col_name_entry = nodes.entry()
+        section_col_value_entry = nodes.entry()
+
+        section_row += section_col_name_entry
+        section_row += section_col_value_entry
+
+        section_col_name_entry += nodes.paragraph(text=colname)
+        section_col_value_entry += nodes.paragraph(text=value)
+
+        return section_row
+
+    def _create_field_detail_section(self, field, running_offset):
+        """Create a detailed section for a single field with all its attributes."""
+        field_name = getattr(field, "_name", "")
+        description = getattr(field, "_description", None)
+        is_array = getattr(field, "_array_shape", None) is not None
+
+        section = nodes.section(ids=[f"field-{field_name}"])
+        section += nodes.title(text=field_name)
+
+        if description:
+            section += nodes.paragraph(text=str(description))
+
+        # Create table for field attributes
+        section_table = nodes.table()
+        section_tgroup = nodes.tgroup(cols=2)
+        section_table += section_tgroup
+
+        section_tgroup += nodes.colspec(colwidth=30)
+        section_tgroup += nodes.colspec(colwidth=70)
+
+        section_thead = nodes.thead()
+        section_tgroup += section_thead
+        section_header_row = nodes.row()
+        section_thead += section_header_row
+
+        section_tbody = nodes.tbody()
+        section_tgroup += section_tbody
+
+        # Add rows for each attribute (except Name, which is the title)
+        for colname, attr, _ in self.ALL_COLUMNS:
+            if attr in ["_name", "_field_type"]:
+                continue
+
+            if not is_array and attr in ["_array_shape", "_array_order"]:
+                continue
+
+            value = self._get_formatted_value(field, attr, running_offset)
+            section_row = self._create_detail_section_row(colname, value)
+            section_tbody += section_row
+
+        section += section_table
+        return section
+
+    def _create_summary_table_structure(self):
+        """Create the structure of the summary table (header and empty body)."""
+        # Count columns that should be shown in summary
+        summary_columns = [col for col in self.ALL_COLUMNS if col.show_on_summary]
+        num_cols = len(summary_columns)
+
+        fields_table = nodes.table()
+        tgroup = nodes.tgroup(cols=num_cols)
+        fields_table += tgroup
+
+        # Create colspecs only for columns shown in summary
+        for _ in summary_columns:
+            tgroup += nodes.colspec(colwidth=15)
+
+        # Build header row
+        thead = nodes.thead()
+        tgroup += thead
+
+        header_row = nodes.row()
+        for column in summary_columns:
+            entry = nodes.entry()
+            entry += nodes.paragraph(text=column.colname)
+            header_row += entry
+
+        thead += header_row
+
+        # Create empty body that will be populated
+        tbody = nodes.tbody()
+        tgroup += tbody
+
+        return fields_table, tbody
+
+    def _create_summary_and_detail_content(self, packet):
+        """Create both summary table and detail sections in a single pass through fields."""
+        # Create the summary table structure
+        summary_table, summary_tbody = self._create_summary_table_structure()
+
+        # Lists to collect detail sections
+        detail_sections = []
+
+        # Single loop through all fields
+        running_offset = 0
+        for field in packet._fields:
+            # Create summary table row
+            summary_row = self._create_summary_table_row(field, running_offset)
+            summary_tbody += summary_row
+
+            # Create detail section
+            detail_section = self._create_field_detail_section(field, running_offset)
+            detail_sections.append(detail_section)
+
+            # Increment running offset by this field's bit length
+            bitlen = getattr(field, "_bit_length", 0)
+            if bitlen is None:
+                bitlen = 0
+            running_offset += int(bitlen)
+
+        return summary_table, detail_sections
+
     def _gen_nodes(self, packet):
+        """Generate documentation nodes for a packet."""
         result = []
 
+        # Create the main description node structure
         desc_node = addnodes.desc()
         desc_node["domain"] = "py"
         desc_node["objtype"] = "data"
         desc_node["noindex"] = False
 
+        # Create signature with packet name and type
         signature_node = addnodes.desc_signature("", "")
         signature_node += addnodes.desc_name(packet.name, packet.name)
 
-        # Add the type info inline after the name
         type_inline = nodes.inline(
             "", f" (Type: {type(packet).__name__})", classes=["packet-type"]
         )
         signature_node += type_inline
         desc_node.append(signature_node)
 
-        # Define all columns to show
-        columns = [
-            ("Name", "_name"),
-            ("DataType", "_data_type"),
-            ("BitLength", "_bit_length"),
-            ("BitOffset", "_bit_offset"),
-            ("ByteOrder", "_byte_order"),
-            ("FieldType", "_field_type"),
-            ("ArrayShape", "_array_shape"),
-            ("ArrayOrder", "_array_order"),
-        ]
-
-        # Get columns to exclude from config
-        exclude_columns = []
-        if (
-            hasattr(self, "state")
-            and hasattr(self.state, "document")
-            and hasattr(self.state.document, "settings")
-            and hasattr(self.state.document.settings, "env")
-        ):
-            env = self.state.document.settings.env
-            if hasattr(env, "config") and hasattr(
-                env.config, "spacdocs_exclude_columns"
-            ):
-                exclude_columns = env.config.spacdocs_exclude_columns or []
-
-        logger.info("[spacdocs] Excluding columns: %s", exclude_columns)
-        filtered_columns = [col[0] for col in columns if col[0] not in exclude_columns]
-        logger.info("[spacdocs] Using columns: %s", filtered_columns)
-
         content_node = addnodes.desc_content()
-        field_sections = []
 
-        # Table of all packet fields with all parameters, and sections for each field
+        # Generate documentation content if fields exist
         if packet._fields:
-            fields_table = nodes.table()
-            tgroup = nodes.tgroup(cols=len(filtered_columns))
-            fields_table += tgroup
+            # Create both summary table and detail sections in a single pass
+            summary_table, detail_sections = self._create_summary_and_detail_content(
+                packet
+            )
 
-            for _ in filtered_columns:
-                tgroup += nodes.colspec(colwidth=15)
+            # Add summary table
+            content_node += summary_table
 
-            # --- Build header row ---
-            thead = nodes.thead()
-            tgroup += thead
-
-            header_row = nodes.row()
-            for header in filtered_columns:
-                entry = nodes.entry()
-                entry += nodes.paragraph(text=header)
-                header_row += entry
-
-            thead += header_row
-            tbody = nodes.tbody()
-            tgroup += tbody
-
-            # Calculate dynamic bit offsets if not set
-            running_offset = 0
-
-            for field in packet._fields:
-                section = nodes.section(ids=[f"field-{field._name}"])
-                field_sections.append(section)
-                section += nodes.title(text=field._name)
-
-                section_table = nodes.table()
-
-                section_tgroup = nodes.tgroup(cols=2)
-                section_table += section_tgroup
-
-                section_tgroup += nodes.colspec(colwidth=30)
-                section_tgroup += nodes.colspec(colwidth=70)
-
-                section_thead = nodes.thead()
-                section_tgroup += section_thead
-                section_header_row = nodes.row()
-                section_thead += section_header_row
-                section_tbody = nodes.tbody()
-                section_tgroup += section_tbody
-
-                row = nodes.row()
-
-                for (colname, attr) in columns:
-                    entry = nodes.entry()
-                    value = getattr(field, attr, "")
-
-                    # Special handling for Name column
-                    if attr == "_name":
-                        desc = getattr(field, "_description", None)
-
-                        para = nodes.paragraph()
-                        # Make the field name a reference link to the section below
-                        ref_uri = f"#field-{value}"
-                        ref = nodes.reference("", str(value), refuri=ref_uri)
-                        para += ref
-
-                        if desc:
-                            # Add tooltip if description exists
-                            safe_desc = (
-                                str(desc).replace('"', "&quot;").replace("'", "&#39;")
-                            )
-
-                            # Inline SVG for Font Awesome info-circle (fa-info-circle)
-                            svg_icon = (
-                                '<span class="field-name-tooltip" style="margin-left:0.4em; vertical-align:middle; display:inline-block; cursor:pointer;">'
-                                '<img src="/_static/circle-info.svg" alt="info" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">'
-                                f'<span class="tooltiptext">{safe_desc}</span>'
-                                "</span>"
-                            )
-                            para += nodes.raw("", svg_icon, format="html")
-
-                            # Also add description below the name in the section
-                            section += nodes.paragraph(text=str(desc))
-
-                        entry += para
-                    else:
-                        section_row = nodes.row()
-                        section_col_name_entry = nodes.entry()
-                        section_col_value_entry = nodes.entry()
-
-                        section_tbody += section_row
-                        section_row += section_col_name_entry
-                        section_row += section_col_value_entry
-                        section_col_name_entry += nodes.paragraph(text=colname)
-
-                        # Special handling for BitOffset to show calculated offset
-                        if attr == "_bit_offset":
-                            if value is None or value == "":
-                                value = running_offset
-                            else:
-                                value = value
-
-                            value = str(value)
-                        else:
-                            # Format None as empty string
-                            if value is None:
-                                value = ""
-                            else:
-                                value = str(value)
-
-                        section_col_value_entry += nodes.paragraph(text=value)
-                        entry += nodes.paragraph(text=value)
-
-                    if colname not in exclude_columns:
-                        row += entry
-
-                # After row, increment running_offset by this field's bit length
-                bitlen = getattr(field, "_bit_length", 0)
-                if bitlen is None:
-                    bitlen = 0
-                running_offset += int(bitlen)
-
-                tbody += row
-                section += section_table
-
-            content_node += fields_table
-
-            for field_section in field_sections:
-                content_node += field_section
+            # Add detail sections
+            for detail_section in detail_sections:
+                content_node += detail_section
 
         desc_node.append(content_node)
         result.append(desc_node)
@@ -374,6 +446,7 @@ class SpacDocsDirective(ObjectDescription):
         return result
 
     def run(self):
+        """Main entry point for the directive."""
         packet_obj_name = self.arguments[0]
         packet = self._load_packet(packet_obj_name)
         if packet is None:
