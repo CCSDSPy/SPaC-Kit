@@ -1,10 +1,11 @@
 """CCSDS parser for binary file with multiple APIDs."""
 from __future__ import annotations
 
-import gc
+import importlib
 import inspect
 import io
 import logging
+import pkgutil
 
 import ccsdspy
 import crccheck
@@ -15,7 +16,7 @@ from spac_kit.parser.util import default_pkt
 logger = logging.getLogger(__name__)
 
 
-class CCSDSParsingException(Exception):
+class CCSDSParsingError(Exception):
     """CCSDS packet parsing Exception."""
 
     pass
@@ -38,7 +39,7 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
     JUMBO_TLM_PKT_LEN_BYTES = 4089  # not including the CCSDS header
 
     def __init__(self):
-        """Initialization."""
+        """Construct the class."""
         pass
 
     @classmethod
@@ -66,17 +67,10 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         pkt_header_bit_string += "{0:02b}".format(ccsds_sequence_flag)
         pkt_header_bit_string += "{0:014b}".format(ccsds_sequence_count)
         pkt_header_bit_string += "{0:016b}".format(ccsds_packet_length)
-        pkt_bytearray = [
-            int(pkt_header_bit_string[i : i + 8], 2)
-            for i in range(0, len(pkt_header_bit_string), 8)
-        ]
+        pkt_bytearray = [int(pkt_header_bit_string[i : i + 8], 2) for i in range(0, len(pkt_header_bit_string), 8)]
         pkt_bytearray += body.tolist()
 
-        crc = (
-            cls.JUMBO_CRC
-            if ccsds_packet_length > cls.JUMBO_TLM_PKT_LEN_BYTES
-            else cls.CRC
-        )
+        crc = cls.JUMBO_CRC if ccsds_packet_length > cls.JUMBO_TLM_PKT_LEN_BYTES else cls.CRC
         return crc.calc(pkt_bytearray)
 
     def convert(
@@ -90,7 +84,7 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         ccsds_packet_length_array,
         body_array,
     ):
-        """Converter to add a calculated CRC to the parsed packets.
+        """Add a calculated CRC to the parsed packets.
 
         @param ccsds_version_number_array: from the CCSDS header
         @param ccsds_packet_type_array: from the CCSDS header
@@ -148,9 +142,7 @@ def calculate_crc(f, crc_size_bytes=2):
                 bit_length=8,
                 array_shape="expand",  # makes the body field expand
             ),
-            ccsdspy.PacketField(
-                name="checksum_real", data_type="uint", bit_length=8 * crc_size_bytes
-            ),
+            ccsdspy.PacketField(name="checksum_real", data_type="uint", bit_length=8 * crc_size_bytes),
         ]
     )
 
@@ -174,48 +166,53 @@ def calculate_crc(f, crc_size_bytes=2):
         parsed_result = pkt.load(f, include_primary_header=True, reset_file_obj=True)
 
         # check that the calculated checksum and the one found in the packet are the same
-        if np.all(
-            parsed_result["checksum_real"] == parsed_result["checksum_calculated"]
-        ):
+        if np.all(parsed_result["checksum_real"] == parsed_result["checksum_calculated"]):
             # return the found checksum for further comparisons
             return parsed_result["checksum_real"]
         else:
-            raise CCSDSParsingException(
-                "The CRC calculated does not match the CRC read in the packet "
-            )
+            raise CCSDSParsingError("The CRC calculated does not match the CRC read in the packet ")
     except IndexError:
         logger.warning("Unable to parse packet to calculate CRC")
         raise CRCNotCalculatedError("Unable to parse packet to calculate CRC")
 
 
+def _import_ccsds_packet_def_objects(module):
+    """(Private) Recursively import CCSDSpy packet definition objects from a module.
+
+    Args:
+        module: module to inspect
+    Yields:
+        CCSDSpy packet definition objects
+    Note:
+        This function is intended for internal use only within this module.
+    """
+
+    def is_discoverable_ccsds_packet(obj):
+        return isinstance(obj, ccsdspy.packet_types._BasePacket) and hasattr(obj, "apid")
+
+    for _, obj in inspect.getmembers(module, is_discoverable_ccsds_packet):
+        yield obj
+
+    for sub_mod in module.__dir__():
+        try:
+            sub_module = importlib.import_module(f"{module.__name__}.{sub_mod}")
+            _import_ccsds_packet_def_objects(sub_module)
+        except Exception:
+            logger.debug("Could not import submodule %s of %s", sub_mod, module.__name__)
+
+
 def import_ccsds_packet_packages():
     """Import of the subpackages of ccsds.packets which are meant to contain the CCSDSpy packet definitions.
 
-    Stolen from https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-namespace-packages
-
-    @return: the set of the imported packages
+    @return: the CCSDSpy packet defninition objects found in the packages.
     """
-    import importlib
-    import pkgutil
+    namespace = "ccsds.packets"
+    ccsds_packet_module = importlib.import_module(namespace)
 
-    # TODO: use a constant for ccsds.packets
-    import ccsds.packets  # noqa
-
-    parsers = []
-
-    def is_ccsds_packet(attr):
-        return isinstance(attr, ccsdspy.packet_types._BasePacket)
-
-    for _, name, _ in pkgutil.walk_packages(
-        ccsds.packets.__path__, ccsds.packets.__name__ + "."
-    ):
+    for _, name, _ in pkgutil.walk_packages(ccsds_packet_module.__path__, namespace + "."):
         module = importlib.import_module(name)
-        members = inspect.getmembers(module, is_ccsds_packet)
-        for _, member in members:
-            if hasattr(member, "apid"):
-                parsers.append(member)
-
-    return parsers
+        for packet_type in _import_ccsds_packet_def_objects(module):
+            yield packet_type
 
 
 def get_packet_definitions():
@@ -224,28 +221,23 @@ def get_packet_definitions():
     First round parsing: object instances of _BasePackets which have an `apid` but no `sub_apid`
     Second round parsing: object instances of _BasePackets which have an `apid` and a `sub_apid`
     """
-    # TODO use the clasees defined in Packets.py to simply the handling of packets
+    # TODO use the clasees defined in Packets.py to simplify the handling of packets
     first_round_parsers = {}
     second_round_parsers = {}
 
-    import_ccsds_packet_packages()
-
-    for object in gc.get_objects():
-        if isinstance(object, ccsdspy.packet_types._BasePacket) and hasattr(
-            object, "apid"
-        ):
-            if hasattr(object, "sub_apid"):
+    for object in import_ccsds_packet_packages():
+        if hasattr(object, "sub_apid"):
+            if object.apid not in second_round_parsers:
+                second_round_parsers[object.apid] = {}
+            if "pkts" not in second_round_parsers[object.apid]:
+                second_round_parsers[object.apid]["pkts"] = {}
+            second_round_parsers[object.apid]["pkts"][object.sub_apid] = object
+        else:
+            first_round_parsers[object.apid] = object
+            if hasattr(object, "decision_fun"):
                 if object.apid not in second_round_parsers:
                     second_round_parsers[object.apid] = {}
-                if "pkts" not in second_round_parsers[object.apid]:
-                    second_round_parsers[object.apid]["pkts"] = {}
-                second_round_parsers[object.apid]["pkts"][object.sub_apid] = object
-            else:
-                first_round_parsers[object.apid] = object
-                if hasattr(object, "decision_fun"):
-                    if object.apid not in second_round_parsers:
-                        second_round_parsers[object.apid] = {}
-                    second_round_parsers[object.apid]["pre_parser"] = object
+                second_round_parsers[object.apid]["pre_parser"] = object
 
     return first_round_parsers, second_round_parsers
 
@@ -255,10 +247,7 @@ def get_sub_packet_keys(parsed_apids, sub_apid: dict):
     decision_fun = sub_apid["pre_parser"].decision_fun
     if hasattr(sub_apid["pre_parser"], "decision_field"):
         decision_field = sub_apid["pre_parser"].decision_field
-        return [
-            decision_fun(decision_value)
-            for decision_value in list(parsed_apids[decision_field])
-        ]
+        return [decision_fun(decision_value) for decision_value in list(parsed_apids[decision_field])]
     else:
         # all the elements of the parsed_aids dictionary have
         # the same length which is the number of packet parsed.
@@ -292,9 +281,7 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
         logger.info("Parse APID %s", apid)
         try:
             pkt = apid_packets.get(apid, default_pkt)
-            parsed_apids = pkt.load(
-                streams, include_primary_header=True, reset_file_obj=True
-            )
+            parsed_apids = pkt.load(streams, include_primary_header=True, reset_file_obj=True)
             if do_calculate_crc:
                 try:
                     parsed_apids["calculated_crc"] = calculate_crc(streams)
@@ -312,12 +299,8 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                         key,
                     )
                     if hasattr(minor_pkt, "set_alt_inputs"):
-                        minor_pkt.set_alt_inputs(
-                            dfs[name]
-                        )  # add reference to previously parsed pkt in the same group
-                    parsed_sub_apid = minor_pkt.load(
-                        buffer[key], include_primary_header=True, reset_file_obj=True
-                    )
+                        minor_pkt.set_alt_inputs(dfs[name])  # add reference to previously parsed pkt in the same group
+                    parsed_sub_apid = minor_pkt.load(buffer[key], include_primary_header=True, reset_file_obj=True)
                     inner_name = get_tab_name(apid, minor_pkt, dfs.keys())
                     parsed_sub_apid = cast_to_list(parsed_sub_apid)
                     if do_calculate_crc:
@@ -345,7 +328,7 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                 "APID %i was not parseable because packet length inconsistent with CCSDS header description",
                 apid,
             )
-        except CCSDSParsingException as e:
+        except CCSDSParsingError as e:
             logger.warning("APID %i: %s", apid, str(e))
 
     return dfs

@@ -8,7 +8,7 @@ class SimpleAPIDPacket(ccsdspy.VariableLength):
     """Simple Packet definition, with name and associated APID."""
 
     def __init__(self, fields: list[ccsdspy.PacketField], name: str, apid: int):
-        """Constructor."""
+        """Construct the class."""
         super().__init__(fields)
         self.apid = apid
         self.name = name
@@ -29,7 +29,7 @@ class PreParserAPIDPacket(SimpleAPIDPacket):
         decision_field: str = None,
         decision_fun: Callable = lambda x: x,
     ):
-        """Constructor."""
+        """Construct the class."""
         super().__init__(fields, apid, name)
         self.decision_field = decision_field
         self.decision_fun = decision_fun
@@ -38,9 +38,7 @@ class PreParserAPIDPacket(SimpleAPIDPacket):
 class ParserSubAPIDPacket(SimpleAPIDPacket):
     """Packet definition associated to a specific flavor of structure within a single APID."""
 
-    def __init__(
-        self, fields: list[ccsdspy.PacketField], name: str, apid: int, sub_apid: int
-    ):
-        """Constructor."""
+    def __init__(self, fields: list[ccsdspy.PacketField], name: str, apid: int, sub_apid: int):
+        """Construct the class."""
         super().__init__(fields, apid, name)
         self.sub_apid = sub_apid
