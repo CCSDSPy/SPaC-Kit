@@ -1,0 +1,76 @@
+name: Lint, test, and release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: apt-get update && apt-get install -y gcc build-essential
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install --with dev
+      - name: Lint with flake8 and pylint
+        run: |
+          poetry run flake8 ccsds
+          poetry run pylint ccsds
+
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Run tests
+        run: poetry run pytest
+
+  release:
+    name: Create GitHub Release
+    if: |
+      ${{
+        (github.event_name == 'pull_request' && github.event.pull_request.merged) ||
+        github.event_name == 'workflow_dispatch'
+      }}
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(poetry version -s)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Create Release Tag
+        if:
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git tag v${{ env.VERSION }}
+          git push origin v${{ env.VERSION }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}

@@ -1,0 +1,44 @@
+name: Publish new release
+
+on:
+  push:
+    branches:
+      - release/*
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment (main or test)'
+        required: false
+        type: environment
+        default: main
+
+jobs:
+  publish_to_pypi:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    environment: |
+      ${{
+        github.event.inputs.environment ||
+        (github.event_name == 'release' && 'main') ||
+        (startsWith(github.ref_name, 'release/') && 'test')
+      }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(poetry version -s)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Build and publish to PyPI
+        run: |
+          poetry config repositories.${{ vars.PYPI_REPOSITORY }} ${{ vars.PYPI_REPOSITORY_URL }}
+          poetry config pypi-token.${{ vars.PYPI_REPOSITORY }} ${{ secrets.PYPI_TOKEN }}
+          poetry publish --build --no-interaction --repository ${{ vars.PYPI_REPOSITORY }}
