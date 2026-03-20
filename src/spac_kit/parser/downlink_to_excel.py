@@ -40,6 +40,12 @@ def get_parser():
         help="Check if CRC in packet matches with the one calculateed, "
         "return the calculated CRC in the spreadsheet next to the one of the packet.",
     )
+    
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
 
     return parser
 
@@ -78,6 +84,9 @@ def main():
     """Command line interface to parse downlink binary file and export to Excel file."""
     parser = get_parser()
     args = parser.parse_args()
+    
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     with open(args.file, "rb") as f:
         ccsds_file = strip_non_ccsds_headers(

@@ -67,7 +67,7 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         pkt_header_bit_string += "{0:014b}".format(ccsds_sequence_count)
         pkt_header_bit_string += "{0:016b}".format(ccsds_packet_length)
         pkt_bytearray = [
-            int(pkt_header_bit_string[i : i + 8], 2)
+            int(pkt_header_bit_string[i: i + 8], 2)
             for i in range(0, len(pkt_header_bit_string), 8)
         ]
         pkt_bytearray += body.tolist()
@@ -188,10 +188,11 @@ def calculate_crc(f, crc_size_bytes=2):
         raise CRCNotCalculatedError("Unable to parse packet to calculate CRC")
 
 
-def import_ccsds_packet_packages():
+def import_ccsds_packet_parsers():
     """Import of the subpackages of ccsds.packets which are meant to contain the CCSDSpy packet definitions.
 
-    Stolen from https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-namespace-packages
+    #using-namespace-packages
+    Stolen from https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/
 
     @return: the set of the imported packages
     """
@@ -206,13 +207,19 @@ def import_ccsds_packet_packages():
     def is_ccsds_packet(attr):
         return isinstance(attr, ccsdspy.packet_types._BasePacket)
 
+    logger.debug('Walking subpackages of "%s" to find packet definitions',
+                 ccsds.packets.__name__)
     for _, name, _ in pkgutil.walk_packages(
         ccsds.packets.__path__, ccsds.packets.__name__ + "."
     ):
+        logger.debug('Importing module "%s"', name)
         module = importlib.import_module(name)
         members = inspect.getmembers(module, is_ccsds_packet)
         for _, member in members:
+            logger.debug('Found packet definition "%s" in module "%s"', member, name)
             if hasattr(member, "apid"):
+                logger.info('Found packet definition APID %i in module "%s"',
+                            member.apid, name)
                 parsers.append(member)
 
     return parsers
@@ -228,25 +235,24 @@ def get_packet_definitions():
     first_round_parsers = {}
     second_round_parsers = {}
 
-    import_ccsds_packet_packages()
+    parsers = import_ccsds_packet_parsers()
 
-    for object in gc.get_objects():
-        if isinstance(object, ccsdspy.packet_types._BasePacket) and hasattr(
-            object, "apid"
-        ):
-            if hasattr(object, "sub_apid"):
-                if object.apid not in second_round_parsers:
-                    second_round_parsers[object.apid] = {}
-                if "pkts" not in second_round_parsers[object.apid]:
-                    second_round_parsers[object.apid]["pkts"] = {}
-                second_round_parsers[object.apid]["pkts"][object.sub_apid] = object
-            else:
-                first_round_parsers[object.apid] = object
-                if hasattr(object, "decision_fun"):
-                    if object.apid not in second_round_parsers:
-                        second_round_parsers[object.apid] = {}
-                    second_round_parsers[object.apid]["pre_parser"] = object
+    for parser in parsers:
+        if hasattr(parser, "sub_apid"):
+            if parser.apid not in second_round_parsers:
+                second_round_parsers[parser.apid] = {}
+            if "pkts" not in second_round_parsers[parser.apid]:
+                second_round_parsers[parser.apid]["pkts"] = {}
+            second_round_parsers[parser.apid]["pkts"][parser.sub_apid] = parser
+        else:
+            first_round_parsers[parser.apid] = parser
+            if hasattr(parser, "decision_fun"):
+                if parser.apid not in second_round_parsers:
+                    second_round_parsers[parser.apid] = {}
+                second_round_parsers[parser.apid]["pre_parser"] = parser
 
+    logger.debug("First round parsers: %s", first_round_parsers)
+    logger.debug("Second round parsers: %s", second_round_parsers)
     return first_round_parsers, second_round_parsers
 
 
