@@ -67,7 +67,7 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         pkt_header_bit_string += "{0:014b}".format(ccsds_sequence_count)
         pkt_header_bit_string += "{0:016b}".format(ccsds_packet_length)
         pkt_bytearray = [
-            int(pkt_header_bit_string[i: i + 8], 2)
+            int(pkt_header_bit_string[i : i + 8], 2)
             for i in range(0, len(pkt_header_bit_string), 8)
         ]
         pkt_bytearray += body.tolist()
@@ -207,8 +207,9 @@ def import_ccsds_packet_parsers():
     def is_ccsds_packet(attr):
         return isinstance(attr, ccsdspy.packet_types._BasePacket)
 
-    logger.debug('Walking subpackages of "%s" to find packet definitions',
-                 ccsds.packets.__name__)
+    logger.debug(
+        'Walking subpackages of "%s" to find packet definitions', ccsds.packets.__name__
+    )
     for _, name, _ in pkgutil.walk_packages(
         ccsds.packets.__path__, ccsds.packets.__name__ + "."
     ):
@@ -218,8 +219,9 @@ def import_ccsds_packet_parsers():
         for _, member in members:
             logger.debug('Found packet definition "%s" in module "%s"', member, name)
             if hasattr(member, "apid"):
-                logger.info('Found packet definition APID %i in module "%s"',
-                            member.apid, name)
+                logger.info(
+                    'Found packet definition APID %i in module "%s"', member.apid, name
+                )
                 parsers.append(member)
 
     return parsers
