@@ -1,10 +1,10 @@
 """CCSDS parser for binary file with multiple APIDs."""
 from __future__ import annotations
 
-import gc
 import inspect
 import io
 import logging
+from pprint import pformat
 
 import ccsdspy
 import crccheck
@@ -28,7 +28,8 @@ class CRCNotCalculatedError(Exception):
 
 
 class CalculatedChecksum(ccsdspy.converters.Converter):
-    """Converter which calculates a CRC checksum from a parsed packet and compare it with the one found in the packet.
+    """Converter which calculates a CRC checksum from a parsed packet
+    and compare it with the one found in the packet.
 
     TODO: make something better, by supporting any packets as input...
     """
@@ -55,7 +56,8 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
     ):
         """Calculate one CRC from the parsed fields of one packet.
 
-        Parsed fields must be the CCSDS header and one body excluding the CRC at the end of the packet.
+        Parsed fields must be the CCSDS header and one body excluding
+        the CRC at the end of the packet.
         """
         pkt_header_bit_string = ""
         # TODO re-use header field length in ccsdspy packet_types.py
@@ -139,7 +141,9 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
 
 
 def calculate_crc(f, crc_size_bytes=2):
-    """Calculate a CRC for each packet so to compare it with the CRC sent at the end of the packets."""
+    """Calculate a CRC for each packet so to compare it with the CRC
+    sent at the end of the packets.
+    """
     pkt = ccsdspy.VariableLength(
         [
             ccsdspy.PacketArray(
@@ -173,7 +177,8 @@ def calculate_crc(f, crc_size_bytes=2):
     try:
         parsed_result = pkt.load(f, include_primary_header=True, reset_file_obj=True)
 
-        # check that the calculated checksum and the one found in the packet are the same
+        # check that the calculated checksum and the one found in the
+        # packet are the same
         if np.all(
             parsed_result["checksum_real"] == parsed_result["checksum_calculated"]
         ):
@@ -189,10 +194,12 @@ def calculate_crc(f, crc_size_bytes=2):
 
 
 def import_ccsds_packet_parsers():
-    """Import of the subpackages of ccsds.packets which are meant to contain the CCSDSpy packet definitions.
+    """Import of the subpackages of ccsds.packets which are meant to
+    contain the CCSDSpy packet definitions.
 
     #using-namespace-packages
-    Stolen from https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/
+    Stolen from https://packaging.python.org/en/latest/guides/
+    creating-and-discovering-plugins/
 
     @return: the set of the imported packages
     """
@@ -228,10 +235,13 @@ def import_ccsds_packet_parsers():
 
 
 def get_packet_definitions():
-    """Select packet definitions which will be parsed in the first round or second round, as a refinement for some APIDs.
+    """Select packet definitions which will be parsed in the first round
+    or second round, as a refinement for some APIDs.
 
-    First round parsing: object instances of _BasePackets which have an `apid` but no `sub_apid`
-    Second round parsing: object instances of _BasePackets which have an `apid` and a `sub_apid`
+    First round parsing: object instances of _BasePackets which have
+    an `apid` but no `sub_apid`
+    Second round parsing: object instances of _BasePackets which have
+    an `apid` and a `sub_apid`
     """
     # TODO use the clasees defined in Packets.py to simply the handling of packets
     first_round_parsers = {}
@@ -247,19 +257,28 @@ def get_packet_definitions():
                 second_round_parsers[parser.apid]["pkts"] = {}
             second_round_parsers[parser.apid]["pkts"][parser.sub_apid] = parser
         else:
+            if parser.apid in first_round_parsers:
+                logger.warning(
+                    "APID %i is already associated with a packet "
+                    "definition: %s, the new one will be ignored",
+                    parser.apid,
+                    first_round_parsers[parser.apid],
+                )
             first_round_parsers[parser.apid] = parser
             if hasattr(parser, "decision_fun"):
                 if parser.apid not in second_round_parsers:
                     second_round_parsers[parser.apid] = {}
                 second_round_parsers[parser.apid]["pre_parser"] = parser
 
-    logger.debug("First round parsers: %s", first_round_parsers)
-    logger.debug("Second round parsers: %s", second_round_parsers)
+    logger.debug("First round parsers: %s", pformat(first_round_parsers))
+    logger.debug("Second round parsers: %s", pformat(second_round_parsers))
     return first_round_parsers, second_round_parsers
 
 
 def get_sub_packet_keys(parsed_apids, sub_apid: dict):
-    """Identify sub-packet keys when single APId does not have consistent packet structures."""
+    """Identify sub-packet keys when single APId does not have
+    consistent packet structures.
+    """
     decision_fun = sub_apid["pre_parser"].decision_fun
     if hasattr(sub_apid["pre_parser"], "decision_field"):
         decision_field = sub_apid["pre_parser"].decision_field
@@ -276,7 +295,8 @@ def get_sub_packet_keys(parsed_apids, sub_apid: dict):
 
 
 def distribute_packets(keyss, stream1):
-    """Distribute binary stream into multiple binary stream with consistent sub-packet structures.
+    """Distribute binary stream into multiple binary stream with
+    consistent sub-packet structures.
 
     Used when single APID does not have consistent packet structure.
     """
@@ -327,6 +347,7 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                         buffer[key], include_primary_header=True, reset_file_obj=True
                     )
                     inner_name = get_tab_name(apid, minor_pkt, dfs.keys())
+                    logger.debug(inner_name)
                     parsed_sub_apid = cast_to_list(parsed_sub_apid)
                     if do_calculate_crc:
                         try:
@@ -342,6 +363,7 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                     )
             else:
                 try:
+                    logger.debug(parsed_apids)
                     parsed_apids = cast_to_list(parsed_apids)
                     current_df = pd.DataFrame.from_dict(parsed_apids)
                     dfs[name] = current_df
@@ -350,26 +372,35 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                     print(str(e))
         except AssertionError:
             logger.warning(
-                "APID %i was not parseable because packet length inconsistent with CCSDS header description",
+                "APID %i was not parseable because packet length "
+                "inconsistent with CCSDS header description",
                 apid,
             )
         except CCSDSParsingException as e:
             logger.warning("APID %i: %s", apid, str(e))
+        except IndexError as e:
+            logger.warning("APID %i: IndexError during parsing - %s", apid, str(e))
 
     return dfs
 
 
 def get_tab_name(apid, pkt_def, existing_names):
-    """Proposes a tab name for each APID or sub-packet structure of an APID.
+    """Proposes a tab name for each APID or sub-packet structure of
+    an APID.
 
-    The tab name can be used as keys in the dictionary of DataFrames or as tab names in the Excel spreadsheet.
+    The tab name can be used as keys in the dictionary of DataFrames
+    or as tab names in the Excel spreadsheet.
 
     @param apid: APID
     @param pkt_def: current packet definition.
-     preferably, the packet definition has a "name" property which will be used to name the tab.
-     If not available the name of the class implementing the packet structure definitionn is used.
-    @param existing_names: already used names, to avoid duplicates. A counter is added to duplicate names.
-    @return: a unique tab name for the current APID and packet structure definition.
+     preferably, the packet definition has a "name" property which will
+     be used to name the tab.
+     If not available the name of the class implementing the packet
+     structure definitionn is used.
+    @param existing_names: already used names, to avoid duplicates.
+     A counter is added to duplicate names.
+    @return: a unique tab name for the current APID and packet
+     structure definition.
     """
     if hasattr(pkt_def, "name"):
         name = f"{apid}.{pkt_def.name}"
@@ -385,8 +416,13 @@ def get_tab_name(apid, pkt_def, existing_names):
 def cast_to_list(d):
     """Casts any multidimensional arrays to lists."""
     for key, value in d.items():
-        if hasattr(value[0].__class__, "tolist"):
-            value = [v.tolist() for v in value]
-            d[key] = value
+        # Convert each element individually if it has tolist method
+        converted = []
+        for v in value:
+            if hasattr(v, "tolist"):
+                converted.append(v.tolist())
+            else:
+                converted.append(v)
+        d[key] = converted
 
     return d
