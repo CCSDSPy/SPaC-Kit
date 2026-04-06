@@ -279,6 +279,8 @@ def get_sub_packet_keys(parsed_apids, sub_apid: dict):
     """Identify sub-packet keys when single APId does not have
     consistent packet structures.
     """
+    logger.debug("Parsed APIDs: %s", pformat(parsed_apids))
+    logger.debug("Sub-APID definition: %s", pformat(sub_apid))
     decision_fun = sub_apid["pre_parser"].decision_fun
     if hasattr(sub_apid["pre_parser"], "decision_field"):
         decision_field = sub_apid["pre_parser"].decision_field
@@ -333,16 +335,27 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                 dfs[name] = dict()
                 keys = get_sub_packet_keys(parsed_apids, apid_multi_pkt[apid])
                 buffer = distribute_packets(keys, streams)
-                for key, minor_pkt in apid_multi_pkt[apid]["pkts"].items():
+                logger.debug("Packets: %s", pformat(apid_multi_pkt[apid]["pkts"]))
+                for key, minor_pkt in reversed(
+                    apid_multi_pkt[apid]["pkts"].items()
+                ):  # WHY IS THIS ORDER DEPENDENT?????
+                    # for key, minor_pkt in apid_multi_pkt[apid]["pkts"].items():
                     logger.info(
                         "Parse sub-APID %s %s",
                         apid_multi_pkt[apid]["pre_parser"].decision_fun,
                         key,
                     )
                     if hasattr(minor_pkt, "set_alt_inputs"):
+                        logger.debug(
+                            "Setting alternative inputs for packet %s, name %s",
+                            minor_pkt,
+                            name,
+                        )
+                        logger.debug("Alternative inputs: %s", dfs[name])
                         minor_pkt.set_alt_inputs(
                             dfs[name]
                         )  # add reference to previously parsed pkt in the same group
+                    logger.debug("Key: %s, buffer: %s", key, buffer[key])
                     parsed_sub_apid = minor_pkt.load(
                         buffer[key], include_primary_header=True, reset_file_obj=True
                     )
@@ -363,7 +376,6 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
                     )
             else:
                 try:
-                    logger.debug(parsed_apids)
                     parsed_apids = cast_to_list(parsed_apids)
                     current_df = pd.DataFrame.from_dict(parsed_apids)
                     dfs[name] = current_df
