@@ -426,6 +426,7 @@ class SpacDocsDirective(ObjectDescription):
         if hasattr(packet, "description") and packet.description:
             desc_para = nodes.paragraph(text=packet.description)
             content_node += desc_para
+            content_node += nodes.transition()
 
         # Generate documentation content if fields exist
         if packet._fields:
