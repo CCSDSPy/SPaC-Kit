@@ -202,12 +202,15 @@ class SpacDocsDirective(ObjectDescription):
 
     def _load_packet(self, packet_obj_name):
         """Load a packet instance from a module path."""
-        module_name, var_name = packet_obj_name.rsplit(".", 1)
-        module = importlib.import_module(module_name)
-        packet = getattr(module, var_name, None)
-        if not isinstance(packet, _BasePacket):
+        try:
+            module_name, var_name = packet_obj_name.rsplit(".", 1)
+            module = importlib.import_module(module_name)
+            packet = getattr(module, var_name, None)
+            if not isinstance(packet, _BasePacket):
+                return None
+            return packet
+        except (ImportError, ValueError):
             return None
-        return packet
 
     def _calculate_bit_offset(self, field, running_offset):
         """Calculate the bit offset for a field, using running offset if not explicitly set."""

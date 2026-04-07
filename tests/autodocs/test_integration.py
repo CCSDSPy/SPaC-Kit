@@ -93,9 +93,9 @@ class TestEndToEndDocGeneration:
 
         # Extract the content node
         desc_node = result[0]
-        content = desc_node.children[1]
+        content = desc_node.children[0]
 
-        # Content should have summary table and detail sections
+        # Content should have summary section, separator, and detail sections
         assert len(content.children) > 0
 
     @patch("spac_kit.autodocs.importlib.import_module")
