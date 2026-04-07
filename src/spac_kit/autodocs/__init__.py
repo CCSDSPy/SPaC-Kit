@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from ccsdspy.packet_types import _BasePacket
 from docutils import nodes
-from sphinx.directives import ObjectDescription
+from docutils.parsers.rst import Directive
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
@@ -184,7 +184,11 @@ def copy_static_css(app, _):
                 logger.info(f"[spacdocs] Copied {fname} to {dest_path}")
 
 
-class SpacDocsDirective(ObjectDescription):
+class SpacDocsDirective(Directive):
+    required_arguments = 1
+    optional_arguments = 0
+    has_content = False
+
     _Column = namedtuple("_Column", ["colname", "attr", "show_on_summary"])
 
     # Column definitions for all field attributes
