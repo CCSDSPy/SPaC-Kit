@@ -422,6 +422,11 @@ class SpacDocsDirective(ObjectDescription):
 
         content_node = addnodes.desc_content()
 
+        # Add packet description if available
+        if hasattr(packet, "description") and packet.description:
+            desc_para = nodes.paragraph(text=packet.description)
+            content_node += desc_para
+
         # Generate documentation content if fields exist
         if packet._fields:
             # Create both summary table and detail sections in a single pass
