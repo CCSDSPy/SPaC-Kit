@@ -75,7 +75,7 @@ def generate_packet_stubs(app):
                 stub_path = os.path.join(STUB_DIR, stub_name)
 
                 # No toctree for fields; field listing is handled by the directive
-                title = f"Packet: {attr_name}"
+                title = f"Packet {attr_name}"
                 stub_content = (
                     f"{title}\n{'='*len(title)}\n\n.. spacdocs:: {full_var_path}\n\n"
                 )
