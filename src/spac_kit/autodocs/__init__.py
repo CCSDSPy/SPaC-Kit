@@ -75,7 +75,10 @@ def generate_packet_stubs(app):
                 stub_path = os.path.join(STUB_DIR, stub_name)
 
                 # No toctree for fields; field listing is handled by the directive
-                stub_content = f"{attr_name}\n{'='*len(attr_name)}\n\n.. spacdocs:: {full_var_path}\n\n"
+                title = f"Packet {attr_name}"
+                stub_content = (
+                    f"{title}\n{'='*len(title)}\n\n.. spacdocs:: {full_var_path}\n\n"
+                )
                 write_stub = True
                 if os.path.exists(stub_path):
                     with open(stub_path, "r") as f:
@@ -121,7 +124,7 @@ def generate_packet_stubs(app):
             child_header = child_mod if child_mod else "packets"
             toctree_content += f"{child_header}\n{'-'*len(child_header)}\n\n.. toctree::\n   :maxdepth: 2\n\n"
             for packet_name, stub in packets:
-                toctree_content += f"   {stub}\n"
+                toctree_content += f"   {packet_name} <{stub}>\n"
             toctree_content += "\n"
         toctree_content += "\n"
 
@@ -414,16 +417,6 @@ class SpacDocsDirective(ObjectDescription):
         desc_node["objtype"] = "data"
         desc_node["noindex"] = False
 
-        # Create signature with packet name and type
-        signature_node = addnodes.desc_signature("", "")
-        signature_node += addnodes.desc_name(packet.name, packet.name)
-
-        type_inline = nodes.inline(
-            "", f" (Type: {type(packet).__name__})", classes=["packet-type"]
-        )
-        signature_node += type_inline
-        desc_node.append(signature_node)
-
         content_node = addnodes.desc_content()
 
         # Generate documentation content if fields exist
@@ -433,12 +426,37 @@ class SpacDocsDirective(ObjectDescription):
                 packet
             )
 
-            # Add summary table
-            content_node += summary_table
+            # Wrap title and table in a section
+            summary_section = nodes.section(ids=["packet-fields-summary"])
+            summary_section += nodes.title(text="Summary of Packet Fields")
+
+            # Add subheader text
+            summary_intro = nodes.paragraph(
+                text=f"The packets of type {packet.name} contain the following fields:"
+            )
+            summary_section += summary_intro
+
+            summary_section += summary_table
+            content_node += summary_section
+
+            # Add horizontal separator
+            content_node += nodes.transition()
+
+            # Create section for field details
+            details_section = nodes.section(ids=["packet-field-details"])
+            details_section += nodes.title(text="Packet Field Details")
+
+            # Add subheader text
+            intro_para = nodes.paragraph(
+                text="Here follows the detailed description of the packet fields."
+            )
+            details_section += intro_para
 
             # Add detail sections
             for detail_section in detail_sections:
-                content_node += detail_section
+                details_section += detail_section
+
+            content_node += details_section
 
         desc_node.append(content_node)
         result.append(desc_node)
