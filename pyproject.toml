@@ -51,3 +51,9 @@ dev = [
 
 [project.scripts]
 spac-parse = "spac_kit.parser.downlink_to_excel:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"spac_kit.parser" = ["*.conf"]
