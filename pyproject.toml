@@ -57,3 +57,4 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "spac_kit.parser" = ["*.conf"]
+"spac_kit.autodocs" = ["resources/*"]
