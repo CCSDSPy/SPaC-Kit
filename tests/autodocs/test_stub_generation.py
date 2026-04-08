@@ -29,7 +29,9 @@ class TestGeneratePacketStubs:
         # Create a mock module with a packet
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
+        mock_packet.description = None
         mock_packet._fields = []
         mock_module.test_packet = mock_packet
         mock_module.__dir__ = lambda self: ["test_packet"]
@@ -63,6 +65,7 @@ class TestGeneratePacketStubs:
         # Create a mock module with a packet
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
         mock_module.test_packet = mock_packet
         mock_module.__dir__ = lambda self: ["test_packet"]
@@ -91,6 +94,7 @@ class TestGeneratePacketStubs:
         # Create a mock module with a packet
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
         mock_module.test_packet = mock_packet
         mock_module.__dir__ = lambda self: ["test_packet"]
@@ -122,6 +126,7 @@ class TestGeneratePacketStubs:
         # Create a mock module with a packet
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
         mock_module.test_packet = mock_packet
         mock_module.__dir__ = lambda self: ["test_packet"]
@@ -151,7 +156,10 @@ class TestGeneratePacketStubs:
         for modpath in mock_sphinx_app.config.spacdocs_packet_modules:
             mock_module = MagicMock()
             mock_packet = Mock(spec=_BasePacket)
-            mock_packet.name = f"Packet_{modpath.split('.')[-1]}"
+            packet_name = f"Packet_{modpath.split('.')[-1]}"
+            mock_packet._name = packet_name
+            mock_packet.name = packet_name
+            mock_packet.description = None
             mock_module.test_packet = mock_packet
             mock_module.__dir__ = lambda self: ["test_packet"]
 
@@ -184,6 +192,7 @@ class TestGeneratePacketStubs:
         # Create a mock module with mixed attributes
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
         mock_module.real_packet = mock_packet
         mock_module.not_a_packet = "just a string"
@@ -213,7 +222,9 @@ class TestGeneratePacketStubs:
         # Create a mock module where packet name matches module name
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "PacketsPacket"
         mock_packet.name = "PacketsPacket"
+        mock_packet.description = None
         mock_module.packets = mock_packet  # Attribute name matches module name
         mock_module.__dir__ = lambda self: ["packets"]
         mock_import.return_value = mock_module

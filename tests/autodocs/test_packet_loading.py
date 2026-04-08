@@ -16,7 +16,9 @@ class TestLoadPacket:
         # Create a mock module with a packet
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
+        mock_packet.description = None
         mock_packet._fields = []
         mock_module.test_packet = mock_packet
         mock_import.return_value = mock_module
@@ -68,7 +70,9 @@ class TestLoadPacket:
         # Create a mock module
         mock_module = MagicMock()
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "DeepPacket"
         mock_packet.name = "DeepPacket"
+        mock_packet.description = None
         mock_packet._fields = []
         mock_module.deep_packet = mock_packet
         mock_import.return_value = mock_module
@@ -89,7 +93,9 @@ class TestDirectiveRun:
         """Test running directive with a valid packet."""
         # Mock the packet loading
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
+        mock_packet.description = None
         mock_packet._fields = []
 
         with patch.object(
@@ -125,7 +131,9 @@ class TestDirectiveRun:
     def test_run_uses_first_argument(self, mock_directive):
         """Test that run uses the first argument from directive arguments."""
         mock_packet = Mock(spec=_BasePacket)
+        mock_packet._name = "TestPacket"
         mock_packet.name = "TestPacket"
+        mock_packet.description = None
         mock_packet._fields = []
 
         with patch.object(

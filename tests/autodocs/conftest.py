@@ -42,7 +42,9 @@ def mock_packet_field():
 def mock_simple_packet(mock_packet_field):
     """Create a simple mock packet with a few fields."""
     packet = Mock(spec=_BasePacket)
-    packet.name = "TestPacket"
+    packet._name = "TestPacket"
+    packet.name = "TestPacket"  # Also set property for direct access
+    packet.description = None  # Explicitly set to None to avoid Mock auto-creation
     packet._fields = [
         mock_packet_field(name="field1", data_type="uint", bit_length=8),
         mock_packet_field(name="field2", data_type="int", bit_length=16),
@@ -55,7 +57,9 @@ def mock_simple_packet(mock_packet_field):
 def mock_array_packet(mock_packet_field):
     """Create a mock packet with array fields."""
     packet = Mock(spec=_BasePacket)
-    packet.name = "ArrayPacket"
+    packet._name = "ArrayPacket"
+    packet.name = "ArrayPacket"  # Also set property for direct access
+    packet.description = None  # Explicitly set to None to avoid Mock auto-creation
     packet._fields = [
         mock_packet_field(
             name="expandable_array",
@@ -82,7 +86,9 @@ def mock_array_packet(mock_packet_field):
 def mock_packet_with_descriptions(mock_packet_field):
     """Create a mock packet with field descriptions."""
     packet = Mock(spec=_BasePacket)
-    packet.name = "DocumentedPacket"
+    packet._name = "DocumentedPacket"
+    packet.name = "DocumentedPacket"  # Also set property for direct access
+    packet.description = None  # Explicitly set to None to avoid Mock auto-creation
     packet._fields = [
         mock_packet_field(
             name="status",
@@ -104,7 +110,9 @@ def mock_packet_with_descriptions(mock_packet_field):
 def mock_packet_with_explicit_offsets(mock_packet_field):
     """Create a mock packet with explicitly set bit offsets."""
     packet = Mock(spec=_BasePacket)
-    packet.name = "ExplicitOffsetPacket"
+    packet._name = "ExplicitOffsetPacket"
+    packet.name = "ExplicitOffsetPacket"  # Also set property for direct access
+    packet.description = None  # Explicitly set to None to avoid Mock auto-creation
     packet._fields = [
         mock_packet_field(name="field1", data_type="uint", bit_length=8, bit_offset=0),
         mock_packet_field(
