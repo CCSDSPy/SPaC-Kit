@@ -16,6 +16,7 @@ def compare(
     has_pkt_header: bool,
     has_json_header: bool,
     create_output: bool = False,
+    create_spreadsheet: bool = False,
 ):
     """Run paring and compare results with a reference.
 
@@ -41,6 +42,12 @@ def compare(
         with open(output_file, "wb") as f:
             f.write(pickle.dumps(dfs))
 
+    if create_spreadsheet:
+        from spac_kit.parser.downlink_to_excel import export_dfs_to_xlsx
+
+        xlsx_file = os.path.join(local_dir, "out.xlsx")
+        export_dfs_to_xlsx(dfs, xlsx_file)
+
     with open(output_file, "rb") as f:
         dfs_expected = pickle.load(f)
 
@@ -48,7 +55,9 @@ def compare(
 
 
 def recursive_compare(dfs, dfs_expected):
-    """Compare embedded dictionary of dictionaries of panda dataframes. Compare the keys and the actual dataframes.
+    """Compare embedded dictionary of dictionaries of panda dataframes.
+
+    Compare the keys and the actual dataframes.
 
     None should be missing and all should match.
     @param dfs: dictionnary of dictionbaries of dataframe

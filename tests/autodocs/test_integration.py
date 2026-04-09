@@ -7,6 +7,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 from ccsdspy.packet_types import _BasePacket
+from docutils import nodes
 from spac_kit.autodocs import generate_packet_stubs
 from spac_kit.autodocs import setup
 from spac_kit.autodocs import SpacDocsDirective
@@ -27,10 +28,10 @@ class TestEndToEndDocGeneration:
         assert isinstance(result, list)
         assert len(result) > 0
 
-        # First node should be a desc node
-        from sphinx import addnodes
+        # First node should be a section node (no longer wrapped in desc)
+        from docutils import nodes
 
-        assert isinstance(result[0], addnodes.desc)
+        assert isinstance(result[0], nodes.section)
 
     def test_packet_with_all_field_types(
         self,
@@ -43,7 +44,9 @@ class TestEndToEndDocGeneration:
 
         # Create a complex packet with various field types
         complex_packet = Mock(spec=_BasePacket)
+        complex_packet._name = "ComplexPacket"
         complex_packet.name = "ComplexPacket"
+        complex_packet.description = None
         complex_packet._fields = [
             mock_packet_field(
                 name="simple_uint",
@@ -91,12 +94,12 @@ class TestEndToEndDocGeneration:
         # Should successfully generate documentation
         assert len(result) > 0
 
-        # Extract the content node
-        desc_node = result[0]
-        content = desc_node.children[1]
+        # First node should be summary section
+        summary_section = result[0]
+        assert isinstance(summary_section, nodes.section)
 
-        # Content should have summary table and detail sections
-        assert len(content.children) > 0
+        # Summary section should have children (title, intro, table)
+        assert len(summary_section.children) > 0
 
     @patch("spac_kit.autodocs.importlib.import_module")
     def test_full_stub_generation_workflow(self, mock_import, tmp_path):
@@ -111,7 +114,10 @@ class TestEndToEndDocGeneration:
         def create_mock_module(modname):
             mock_module = MagicMock()
             mock_packet = Mock(spec=_BasePacket)
-            mock_packet.name = f"Packet_{modname.split('.')[-1]}"
+            packet_name = f"Packet_{modname.split('.')[-1]}"
+            mock_packet._name = packet_name
+            mock_packet.name = packet_name
+            mock_packet.description = None
             mock_packet._fields = []
             setattr(mock_module, f"pkt_{modname.split('.')[-1]}", mock_packet)
             mock_module.__dir__ = lambda self: [f"pkt_{modname.split('.')[-1]}"]
@@ -162,20 +168,24 @@ class TestEdgeCases:
         """Test handling packet with no fields."""
         # Create empty packet
         empty_packet = Mock(spec=_BasePacket)
+        empty_packet._name = "EmptyPacket"
         empty_packet.name = "EmptyPacket"
+        empty_packet.description = None
         empty_packet._fields = []
 
         with patch.object(mock_directive, "_load_packet", return_value=empty_packet):
             result = mock_directive.run()
 
-        # Should still generate basic documentation
-        assert len(result) > 0
+        # Empty packets return empty list (no fields to document)
+        assert isinstance(result, list)
 
     def test_packet_with_none_values(self, mock_directive, mock_packet_field):
         """Test handling fields with None values."""
         # Create packet with fields having None values
         packet = Mock(spec=_BasePacket)
+        packet._name = "NonePacket"
         packet.name = "NonePacket"
+        packet.description = None
         packet._fields = [
             mock_packet_field(
                 name="field1",
@@ -196,7 +206,9 @@ class TestEdgeCases:
     def test_packet_with_zero_bit_length(self, mock_directive, mock_packet_field):
         """Test handling fields with zero bit length."""
         packet = Mock(spec=_BasePacket)
+        packet._name = "ZeroBitPacket"
         packet.name = "ZeroBitPacket"
+        packet.description = None
         packet._fields = [
             mock_packet_field(name="zero_field", data_type="uint", bit_length=0),
         ]
@@ -211,7 +223,9 @@ class TestEdgeCases:
         """Test that running offset accumulates correctly across fields."""
         # Create packet with multiple fields
         packet = Mock(spec=_BasePacket)
+        packet._name = "OffsetPacket"
         packet.name = "OffsetPacket"
+        packet.description = None
         packet._fields = [
             mock_packet_field(
                 name="field1", data_type="uint", bit_length=8, bit_offset=None
@@ -277,7 +291,10 @@ class TestRealWorldScenarios:
             mock_module = MagicMock()
             mock_packet = Mock(spec=_BasePacket)
             instrument = modpath.split(".")[-1]
-            mock_packet.name = f"{instrument}_telemetry"
+            packet_name = f"{instrument}_telemetry"
+            mock_packet._name = packet_name
+            mock_packet.name = packet_name
+            mock_packet.description = None
             mock_packet._fields = []
             setattr(mock_module, f"{instrument}_pkt", mock_packet)
             mock_module.__dir__ = lambda self: [f"{instrument}_pkt"]
@@ -304,7 +321,9 @@ class TestRealWorldScenarios:
     ):
         """Test handling descriptions with special characters."""
         packet = Mock(spec=_BasePacket)
+        packet._name = "SpecialCharsPacket"
         packet.name = "SpecialCharsPacket"
+        packet.description = None
         packet._fields = [
             mock_packet_field(
                 name="field1",

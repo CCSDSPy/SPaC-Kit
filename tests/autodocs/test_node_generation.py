@@ -260,47 +260,45 @@ class TestGenNodes:
     """Tests for _gen_nodes method."""
 
     def test_gen_nodes_creates_desc_node(self, mock_directive, mock_simple_packet):
-        """Test that _gen_nodes creates proper description node."""
+        """Test that _gen_nodes creates proper node structure."""
         nodes_list = mock_directive._gen_nodes(mock_simple_packet)
 
-        # Should return a list with one desc node
-        assert len(nodes_list) == 1
-        assert isinstance(nodes_list[0], addnodes.desc)
+        # Should return a list with multiple nodes (summary section, separator, details section)
+        assert len(nodes_list) >= 2
+        assert isinstance(nodes_list[0], nodes.section)  # Summary section
 
-        desc_node = nodes_list[0]
-        assert desc_node["domain"] == "py"
-        assert desc_node["objtype"] == "data"
-        assert desc_node["noindex"] is False
+        # Check that we have sections in the output
+        sections = [n for n in nodes_list if isinstance(n, nodes.section)]
+        assert len(sections) >= 2  # Summary and details sections
 
     def test_gen_nodes_includes_packet_name(self, mock_directive, mock_simple_packet):
         """Test that generated nodes include packet name."""
         nodes_list = mock_directive._gen_nodes(mock_simple_packet)
-        desc_node = nodes_list[0]
 
-        # Find the signature node
-        signature = desc_node.children[0]
-        assert isinstance(signature, addnodes.desc_signature)
+        # First node is the summary section
+        summary_section = nodes_list[0]
+        assert isinstance(summary_section, nodes.section)
 
-        # Should contain packet name
-        assert "TestPacket" in signature.astext()
+        # Should contain packet name in the summary section
+        assert "TestPacket" in summary_section.astext()
 
     def test_gen_nodes_includes_packet_type(self, mock_directive, mock_simple_packet):
-        """Test that generated nodes include packet type."""
+        """Test that generated nodes include packet name in intro text."""
         nodes_list = mock_directive._gen_nodes(mock_simple_packet)
-        desc_node = nodes_list[0]
 
-        signature = desc_node.children[0]
-        # Should mention the type
-        assert "Type:" in signature.astext() or "MagicMock" in signature.astext()
+        # First node is the summary section
+        summary_section = nodes_list[0]
+        # The packet name should appear in the intro text "The packets of type TestPacket..."
+        assert "TestPacket" in summary_section.astext()
 
     def test_gen_nodes_includes_content(self, mock_directive, mock_simple_packet):
-        """Test that generated nodes include content section."""
+        """Test that generated nodes include content."""
         nodes_list = mock_directive._gen_nodes(mock_simple_packet)
-        desc_node = nodes_list[0]
 
-        # Should have content node
-        content = desc_node.children[1]
-        assert isinstance(content, addnodes.desc_content)
+        # Should have multiple nodes returned directly
+        assert len(nodes_list) > 0
 
-        # Content should have children (table and sections)
-        assert len(content.children) > 0
+        # First node should be summary section with children
+        summary_section = nodes_list[0]
+        assert isinstance(summary_section, nodes.section)
+        assert len(summary_section.children) > 0

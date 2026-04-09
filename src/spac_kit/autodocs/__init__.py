@@ -6,8 +6,7 @@ from collections import namedtuple
 
 from ccsdspy.packet_types import _BasePacket
 from docutils import nodes
-from sphinx import addnodes
-from sphinx.directives import ObjectDescription
+from docutils.parsers.rst import Directive
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
@@ -185,7 +184,11 @@ def copy_static_css(app, _):
                 logger.info(f"[spacdocs] Copied {fname} to {dest_path}")
 
 
-class SpacDocsDirective(ObjectDescription):
+class SpacDocsDirective(Directive):
+    required_arguments = 1
+    optional_arguments = 0
+    has_content = False
+
     _Column = namedtuple("_Column", ["colname", "attr", "show_on_summary"])
 
     # Column definitions for all field attributes
@@ -202,12 +205,15 @@ class SpacDocsDirective(ObjectDescription):
 
     def _load_packet(self, packet_obj_name):
         """Load a packet instance from a module path."""
-        module_name, var_name = packet_obj_name.rsplit(".", 1)
-        module = importlib.import_module(module_name)
-        packet = getattr(module, var_name, None)
-        if not isinstance(packet, _BasePacket):
+        try:
+            module_name, var_name = packet_obj_name.rsplit(".", 1)
+            module = importlib.import_module(module_name)
+            packet = getattr(module, var_name, None)
+            if not isinstance(packet, _BasePacket):
+                return None
+            return packet
+        except (ImportError, ValueError):
             return None
-        return packet
 
     def _calculate_bit_offset(self, field, running_offset):
         """Calculate the bit offset for a field, using running offset if not explicitly set."""
@@ -411,13 +417,11 @@ class SpacDocsDirective(ObjectDescription):
         """Generate documentation nodes for a packet."""
         result = []
 
-        # Create the main description node structure
-        desc_node = addnodes.desc()
-        desc_node["domain"] = "py"
-        desc_node["objtype"] = "data"
-        desc_node["noindex"] = False
-
-        content_node = addnodes.desc_content()
+        # Add packet description if available
+        if hasattr(packet, "description") and packet.description:
+            desc_para = nodes.paragraph(text=packet.description)
+            result.append(desc_para)
+            result.append(nodes.transition())
 
         # Generate documentation content if fields exist
         if packet._fields:
@@ -437,10 +441,10 @@ class SpacDocsDirective(ObjectDescription):
             summary_section += summary_intro
 
             summary_section += summary_table
-            content_node += summary_section
+            result.append(summary_section)
 
             # Add horizontal separator
-            content_node += nodes.transition()
+            result.append(nodes.transition())
 
             # Create section for field details
             details_section = nodes.section(ids=["packet-field-details"])
@@ -456,10 +460,7 @@ class SpacDocsDirective(ObjectDescription):
             for detail_section in detail_sections:
                 details_section += detail_section
 
-            content_node += details_section
-
-        desc_node.append(content_node)
-        result.append(desc_node)
+            result.append(details_section)
 
         return result
 
