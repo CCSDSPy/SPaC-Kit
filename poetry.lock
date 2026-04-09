@@ -210,14 +210,13 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "ccsdspy"
-version = "1.4.3"
+version = "1.4.3.dev32+ge35d2b78f"
 description = "IO Interface for Reading CCSDS Data in Python."
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
-files = [
-    {file = "ccsdspy-1.4.3.tar.gz", hash = "sha256:38656d8bb943b79fefdf166f345151885c8d4fb8c900ee3ba0a107e2a5fc50c2"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 numpy = ">=1.8.0"
@@ -225,6 +224,12 @@ numpy = ">=1.8.0"
 [package.extras]
 dev = ["black (==22.10.0)", "coverage (>=6.5.0)", "coverage[toml]", "flake8 (>=5.0.4)", "pytest (>=7.1.3,<8.1.0)", "pytest-astropy", "pytest-cov"]
 docs = ["graphviz (>=0.20.1)", "numpydoc", "sphinx (>=5.2.3)", "sphinx-automodapi (>=0.14.1)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/CCSDSPy/ccsdspy.git"
+reference = "HEAD"
+resolved_reference = "e35d2b78fd9f44b15f2c830b84a600c0c1e7b7a5"
 
 [[package]]
 name = "certifi"
@@ -1628,4 +1633,4 @@ dev = ["black", "flake8", "pre-commit", "pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "a840a37e78fc7923bf51c2c9c6918f8798a8520f05131c31421120d1da250891"
+content-hash = "94f3eac538998388f5d1b36a2624e54a7e3b25e13ad4920302a1a1bb81302ac3"
