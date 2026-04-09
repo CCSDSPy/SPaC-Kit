@@ -248,16 +248,3 @@ class TestExportDfsToXlsx:
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-
-
-class TestExportCcsdsToExcel:
-    """Tests for export_ccsds_to_excel function."""
-
-    def test_export_ccsds_to_excel_integration(self):
-        """Integration test for complete CCSDS to Excel export.
-
-        Note: This test requires actual CCSDS packet definitions via
-        ccsds.packets module, which is not available without a plugin
-        package installed.
-        """
-        pytest.skip("Requires ccsds.packets plugin module - skipping integration test")
