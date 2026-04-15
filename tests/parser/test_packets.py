@@ -69,8 +69,8 @@ class TestPreParserAPIDPacket:
         packet = PreParserAPIDPacket(fields, name="PreParser", apid=200)
 
         # Due to the bug, name and apid are swapped!
-        assert packet.name == 200  # name gets apid value
-        assert packet.apid == "PreParser"  # apid gets name value
+        assert packet.name == "PreParser"  # name gets apid value
+        assert packet.apid == 200  # apid gets name value
         assert packet.decision_field is None
         assert callable(packet.decision_fun)
         assert packet.decision_fun(5) == 5  # Identity function by default
@@ -140,8 +140,8 @@ class TestParserSubAPIDPacket:
         packet = ParserSubAPIDPacket(fields, name="SubPacket", apid=300, sub_apid=1)
 
         # Due to the bug, name and apid are swapped!
-        assert packet.name == 300  # name gets apid value
-        assert packet.apid == "SubPacket"  # apid gets name value
+        assert packet.name == "SubPacket"  # name gets apid value
+        assert packet.apid == 300  # apid gets name value
         assert packet.sub_apid == 1
 
     def test_sub_apid_assignment(self):
@@ -167,10 +167,10 @@ class TestParserSubAPIDPacket:
         packet2 = ParserSubAPIDPacket(fields, name="Sub2", apid=100, sub_apid=2)
 
         # Due to bug, name and apid are swapped
-        assert packet1.name == 100  # name = apid value
-        assert packet2.name == 100  # name = apid value
-        assert packet1.apid == "Sub1"  # apid = name value
-        assert packet2.apid == "Sub2"  # apid = name value
+        assert packet1.name == "Sub1"  # name = apid value
+        assert packet2.name == "Sub2"  # name = apid value
+        assert packet1.apid == 100  # apid = name value
+        assert packet2.apid == 100  # apid = name value
         assert packet1.sub_apid != packet2.sub_apid
         assert packet1.sub_apid == 1
         assert packet2.sub_apid == 2
