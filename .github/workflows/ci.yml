@@ -27,8 +27,8 @@ jobs:
         run: poetry install --with dev
       - name: Lint with flake8 and pylint
         run: |
-          poetry run flake8 ccsds
-          poetry run pylint ccsds
+          poetry run flake8 src
+          poetry run pylint src
 
   test:
     runs-on: ubuntu-latest
