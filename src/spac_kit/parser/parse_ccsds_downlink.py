@@ -57,13 +57,13 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         """
         pkt_header_bit_string = ""
         # TODO re-use header field length in ccsdspy packet_types.py
-        pkt_header_bit_string += "{0:03b}".format(ccsds_version_number)
-        pkt_header_bit_string += "{0:01b}".format(ccsds_packet_type)
-        pkt_header_bit_string += "{0:01b}".format(ccsds_secondary_flag)
-        pkt_header_bit_string += "{0:011b}".format(ccsds_apid)
-        pkt_header_bit_string += "{0:02b}".format(ccsds_sequence_flag)
-        pkt_header_bit_string += "{0:014b}".format(ccsds_sequence_count)
-        pkt_header_bit_string += "{0:016b}".format(ccsds_packet_length)
+        pkt_header_bit_string += f"{ccsds_version_number:03b}"
+        pkt_header_bit_string += f"{ccsds_packet_type:01b}"
+        pkt_header_bit_string += f"{ccsds_secondary_flag:01b}"
+        pkt_header_bit_string += f"{ccsds_apid:011b}"
+        pkt_header_bit_string += f"{ccsds_sequence_flag:02b}"
+        pkt_header_bit_string += f"{ccsds_sequence_count:014b}"
+        pkt_header_bit_string += f"{ccsds_packet_length:016b}"
         pkt_bytearray = [
             int(pkt_header_bit_string[i : i + 8], 2)
             for i in range(0, len(pkt_header_bit_string), 8)
@@ -184,9 +184,9 @@ def calculate_crc(f, crc_size_bytes=2):
         raise CCSDSParsingException(
             "The CRC calculated does not match the CRC read in the packet "
         )
-    except IndexError:
+    except IndexError as e:
         logger.warning("Unable to parse packet to calculate CRC")
-        raise CRCNotCalculatedError("Unable to parse packet to calculate CRC")
+        raise CRCNotCalculatedError("Unable to parse packet to calculate CRC") from e
 
 
 def import_ccsds_packet_packages():
@@ -240,22 +240,20 @@ def get_packet_definitions():
 
     import_ccsds_packet_packages()
 
-    for object in gc.get_objects():
-        if isinstance(object, ccsdspy.packet_types._BasePacket) and hasattr(
-            object, "apid"
-        ):
-            if hasattr(object, "sub_apid"):
-                if object.apid not in second_round_parsers:
-                    second_round_parsers[object.apid] = {}
-                if "pkts" not in second_round_parsers[object.apid]:
-                    second_round_parsers[object.apid]["pkts"] = {}
-                second_round_parsers[object.apid]["pkts"][object.sub_apid] = object
+    for obj in gc.get_objects():
+        if isinstance(obj, ccsdspy.packet_types._BasePacket) and hasattr(obj, "apid"):
+            if hasattr(obj, "sub_apid"):
+                if obj.apid not in second_round_parsers:
+                    second_round_parsers[obj.apid] = {}
+                if "pkts" not in second_round_parsers[obj.apid]:
+                    second_round_parsers[obj.apid]["pkts"] = {}
+                second_round_parsers[obj.apid]["pkts"][obj.sub_apid] = obj
             else:
-                first_round_parsers[object.apid] = object
-                if hasattr(object, "decision_fun"):
-                    if object.apid not in second_round_parsers:
-                        second_round_parsers[object.apid] = {}
-                    second_round_parsers[object.apid]["pre_parser"] = object
+                first_round_parsers[obj.apid] = obj
+                if hasattr(obj, "decision_fun"):
+                    if obj.apid not in second_round_parsers:
+                        second_round_parsers[obj.apid] = {}
+                    second_round_parsers[obj.apid]["pre_parser"] = obj
 
     return first_round_parsers, second_round_parsers
 

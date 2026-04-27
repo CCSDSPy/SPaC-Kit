@@ -80,13 +80,13 @@ def generate_packet_stubs(app):
                 )
                 write_stub = True
                 if os.path.exists(stub_path):
-                    with open(stub_path, "r") as f:
+                    with open(stub_path, "r", encoding="utf-8") as f:
                         existing = f.read()
                     if existing == stub_content:
                         write_stub = False
                 if write_stub:
                     logger.info("[spacdocs] Writing stub: %s", stub_path)
-                    with open(stub_path, "w") as f:
+                    with open(stub_path, "w", encoding="utf-8") as f:
                         f.write(stub_content)
                 stub_relpath = f"_autopackets/{stub_name}"
                 stub_infos.append(
@@ -132,13 +132,13 @@ def generate_packet_stubs(app):
 
     write_toctree = True
     if os.path.exists(TOCTREE_FILE):
-        with open(TOCTREE_FILE, "r") as f:
+        with open(TOCTREE_FILE, "r", encoding="utf-8") as f:
             existing = f.read()
         if existing == toctree_content:
             write_toctree = False
     if write_toctree:
         logger.info("[spacdocs] Writing toctree file: %s", TOCTREE_FILE)
-        with open(TOCTREE_FILE, "w") as f:
+        with open(TOCTREE_FILE, "w", encoding="utf-8") as f:
             f.write(toctree_content)
     logger.info("[spacdocs] Stub files written: %d", len(stub_infos))
     logger.info("[spacdocs] Done with stub generation.")
@@ -240,10 +240,9 @@ class SpacDocsDirective(Directive):
 
         if array_shape == "expand":
             return f"{str(data_type)}[]"
-        elif isinstance(array_shape, tuple):
+        if isinstance(array_shape, tuple):
             return f'{str(data_type)}[{",".join(map(str, array_shape))}]'
-        else:
-            return str(data_type)
+        return str(data_type)
 
     def _format_field_value(self, field, attr):
         """Format a generic field attribute value for display."""
@@ -256,10 +255,9 @@ class SpacDocsDirective(Directive):
         """Route to the appropriate formatter based on the attribute."""
         if attr == "_data_type":
             return self._format_data_type(field)
-        elif attr == "_bit_offset":
+        if attr == "_bit_offset":
             return self._format_bit_offset(field, running_offset)
-        else:
-            return self._format_field_value(field, attr)
+        return self._format_field_value(field, attr)
 
     def _create_name_entry_with_tooltip(self, field_name, description):
         """Create a table entry for the Name column with an optional tooltip."""
