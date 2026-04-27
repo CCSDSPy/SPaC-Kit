@@ -139,10 +139,7 @@ def strip_non_ccsds_headers(
     if is_bdsem:
         if has_pkt_header:
             return remove_bdsem_and_message_headers(file_handler)
-        else:
-            return remove_bdsem(file_handler)
-    else:
-        if has_pkt_header:
-            return remove_mise_and_headers(file_handler)
-        else:
-            return file_handler
+        return remove_bdsem(file_handler)
+    if has_pkt_header:
+        return remove_mise_and_headers(file_handler)
+    return file_handler

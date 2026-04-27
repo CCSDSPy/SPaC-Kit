@@ -56,8 +56,8 @@ def add_tab_to_xlsx(dfs, writer, name=""):
     @return: Nothing
     """
     if isinstance(dfs, dict):
-        for name, df in dfs.items():
-            add_tab_to_xlsx(df, writer, name=name)
+        for tab_name, df in dfs.items():
+            add_tab_to_xlsx(df, writer, name=tab_name)
     else:
         logger.info("Adding tab %s to excel spreadsheet", name)
         dfs.to_excel(writer, sheet_name=name, index=True)
