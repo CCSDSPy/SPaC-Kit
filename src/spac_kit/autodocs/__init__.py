@@ -30,8 +30,8 @@ def setup(app):
 # --- Stub generation for packets ---
 def generate_packet_stubs(app):
     """
-    Scan for all _BasePacket instances in a configured module, generate .rst stubs for each,
-    and update a master toctree file.
+    Scan for all _BasePacket instances in a configured module,
+    generate .rst stubs for each, and update a master toctree file.
     """
     # --- Configuration ---
     # You may want to make this configurable via conf.py
@@ -121,7 +121,10 @@ def generate_packet_stubs(app):
         toctree_content += f"{parent_mod}\n{'='*len(parent_mod)}\n\n"
         for child_mod, packets in child_dict.items():
             child_header = child_mod if child_mod else "packets"
-            toctree_content += f"{child_header}\n{'-'*len(child_header)}\n\n.. toctree::\n   :maxdepth: 2\n\n"
+            toctree_content += (
+                f"{child_header}\n{'-'*len(child_header)}\n\n"
+                f".. toctree::\n   :maxdepth: 2\n\n"
+            )
             for packet_name, stub in packets:
                 toctree_content += f"   {packet_name} <{stub}>\n"
             toctree_content += "\n"
@@ -216,7 +219,10 @@ class SpacDocsDirective(Directive):
             return None
 
     def _calculate_bit_offset(self, field, running_offset):
-        """Calculate the bit offset for a field, using running offset if not explicitly set."""
+        """
+        Calculate the bit offset for a field,
+        using running offset if not explicitly set.
+        """
         value = getattr(field, "_bit_offset", None)
         if value is None or value == "":
             return running_offset
@@ -265,8 +271,12 @@ class SpacDocsDirective(Directive):
         if description:
             safe_desc = str(description).replace('"', "&quot;").replace("'", "&#39;")
             svg_icon = (
-                '<span class="field-name-tooltip" style="margin-left:0.4em; vertical-align:middle; display:inline-block; cursor:pointer;">'
-                '<img src="/_static/circle-info.svg" alt="info" style="width:1em;height:1em;vertical-align:middle;display:inline-block;">'
+                '<span class="field-name-tooltip" '
+                'style="margin-left:0.4em; vertical-align:middle; '
+                'display:inline-block; cursor:pointer;">'
+                '<img src="/_static/circle-info.svg" alt="info" '
+                'style="width:1em;height:1em;vertical-align:middle;'
+                'display:inline-block;">'
                 f'<span class="tooltiptext">{safe_desc}</span>'
                 "</span>"
             )
@@ -387,7 +397,10 @@ class SpacDocsDirective(Directive):
         return fields_table, tbody
 
     def _create_summary_and_detail_content(self, packet):
-        """Create both summary table and detail sections in a single pass through fields."""
+        """
+        Create both summary table and detail sections
+        in a single pass through fields.
+        """
         # Create the summary table structure
         summary_table, summary_tbody = self._create_summary_table_structure()
 

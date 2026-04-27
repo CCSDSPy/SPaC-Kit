@@ -53,7 +53,9 @@ def remove_bdsem_and_message_headers(f):
                 & 0b0011111111111111
             )
             logger.warning(
-                "Skip packet apid %i, sequence count %i: length did not match with the packet length specified in the message header",
+                "Skip packet apid %i, sequence count %i: length did not "
+                "match with the packet length specified in the message "
+                "header",
                 apid,
                 sequence_cnt,
             )
@@ -120,7 +122,9 @@ def start_sequence(seq):
 def strip_non_ccsds_headers(
     file_handler, is_bdsem: bool, has_pkt_header: bool, has_json_header: bool
 ):
-    """Remove all cases of non CCSDS headers which can occur in Europa-Clipper SDS inputs, mostly in test cases.
+    """
+    Remove all cases of non CCSDS headers which can occur in
+    Europa-Clipper SDS inputs, mostly in test cases.
 
     @param filename: input binary filename
     @param is_bdsem: file coming from BDSEM, else RAW
