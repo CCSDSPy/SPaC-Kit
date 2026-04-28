@@ -8,30 +8,28 @@ from spac_kit.parser.util import import_ccsds_packet_packages
 def format_packet_info(parser):
     """Format packet information into a row for display."""
     apid = getattr(parser, "apid", "N/A")
-    packet_type = parser.__class__.__name__
+    packet_class = parser.__class__.__name__
     name = getattr(parser, "name", "")
     module = parser.__class__.__module__
 
-    # Count fields
-    if hasattr(parser, "_fields"):
-        num_fields = len(parser._fields)
-    else:
-        num_fields = 0
+    # Full packet identifier (module + class)
+    packet = f"{module}.{packet_class}"
+
+    # Get the packet definition type (base class)
+    definition = parser.__class__.__bases__[0].__name__ if parser.__class__.__bases__ else "Unknown"
 
     return {
         "apid": apid,
-        "type": packet_type,
+        "packet": packet,
         "name": name,
-        "module": module,
-        "fields": num_fields,
+        "definition": definition,
     }
 
 
-def list_packages(verbose=False, delimiter=None):
+def list_packages(delimiter=None):
     """List all available CCSDS packet packages.
 
     Args:
-        verbose: Include module paths in output
         delimiter: If specified, output as delimited format (e.g., ',' for CSV, '\t' for TSV)
     """
     try:
@@ -50,18 +48,11 @@ def list_packages(verbose=False, delimiter=None):
 
         if delimiter:
             # CSV/delimited output format
-            if verbose:
-                headers = ["APID", "TYPE", "FIELDS", "NAME", "MODULE"]
-            else:
-                headers = ["APID", "TYPE", "FIELDS", "NAME"]
-
+            headers = ["APID", "PACKET", "NAME", "DEFINITION"]
             print(delimiter.join(headers))
 
             for info in packet_info:
-                if verbose:
-                    row = [str(info["apid"]), info["type"], str(info["fields"]), info["name"], info["module"]]
-                else:
-                    row = [str(info["apid"]), info["type"], str(info["fields"]), info["name"]]
+                row = [str(info["apid"]), info["packet"], info["name"], info["definition"]]
                 print(delimiter.join(row))
         else:
             # Table format output
@@ -69,20 +60,17 @@ def list_packages(verbose=False, delimiter=None):
             apid_width = max(len(str(p["apid"])) for p in packet_info)
             apid_width = max(apid_width, len("APID"))
 
-            type_width = max(len(p["type"]) for p in packet_info)
-            type_width = max(type_width, len("TYPE"))
-
-            fields_width = max(len(str(p["fields"])) for p in packet_info)
-            fields_width = max(fields_width, len("FIELDS"))
+            packet_width = max(len(p["packet"]) for p in packet_info)
+            packet_width = max(packet_width, len("PACKET"))
 
             name_width = max(len(p["name"]) for p in packet_info)
             name_width = max(name_width, len("NAME"))
 
+            definition_width = max(len(p["definition"]) for p in packet_info)
+            definition_width = max(definition_width, len("DEFINITION"))
+
             # Print header
-            if verbose:
-                header = f"{'APID':<{apid_width}}  {'TYPE':<{type_width}}  {'FIELDS':<{fields_width}}  {'NAME':<{name_width}}  MODULE"
-            else:
-                header = f"{'APID':<{apid_width}}  {'TYPE':<{type_width}}  {'FIELDS':<{fields_width}}  NAME"
+            header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  DEFINITION"
 
             print(header)
             print("-" * len(header))
@@ -90,10 +78,7 @@ def list_packages(verbose=False, delimiter=None):
             # Print each packet
             for info in packet_info:
                 apid_str = str(info["apid"])
-                if verbose:
-                    line = f"{apid_str:<{apid_width}}  {info['type']:<{type_width}}  {info['fields']:<{fields_width}}  {info['name']:<{name_width}}  {info['module']}"
-                else:
-                    line = f"{apid_str:<{apid_width}}  {info['type']:<{type_width}}  {info['fields']:<{fields_width}}  {info['name']}"
+                line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['definition']}"
                 print(line)
 
             print(f"\nTotal: {len(parsers)} packet definition(s)")
@@ -116,17 +101,16 @@ def get_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  spac-ls                    List all available packet definitions
-  spac-ls -v                 List with verbose output including module paths
-  spac-ls -d ","             Output as CSV format
-  spac-ls -d $'\\t'          Output as TSV (tab-separated) format
-  spac-ls -v -d "," > out.csv  Save verbose CSV output to file
+  spac-ls                List all available packet definitions
+  spac-ls -d ","         Output as CSV format
+  spac-ls -d $'\\t'      Output as TSV (tab-separated) format
+  spac-ls -d "," > out.csv  Save CSV output to file
         """
     )
     parser.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="Show verbose output including module paths"
+        help="Reserved for future use"
     )
     parser.add_argument(
         "-d", "--delimiter",
@@ -141,7 +125,7 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    sys.exit(list_packages(verbose=args.verbose, delimiter=args.delimiter))
+    sys.exit(list_packages(delimiter=args.delimiter))
 
 
 if __name__ == "__main__":

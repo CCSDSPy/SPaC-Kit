@@ -1,11 +1,39 @@
 """Unit tests for spac-ls CLI tool."""
 import sys
 from io import StringIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 
 import ccsdspy
 import pytest
 from spac_kit.parser.spac_ls import format_packet_info, list_packages, main
+
+
+def create_mock_packet(class_name, module, base_class, apid, name=None):
+    """Create a properly mocked packet for testing.
+
+    Args:
+        class_name: Name of the packet class
+        module: Module path
+        base_class: Base class (e.g., ccsdspy.FixedLength) - only the name is used
+        apid: APID value
+        name: Optional packet name (None means no name attribute)
+    """
+    # Create a mock base class with the right name
+    MockBase = type(base_class.__name__, (object,), {})
+
+    # Create the packet class inheriting from the mock base
+    DynamicClass = type(class_name, (MockBase,), {})
+    DynamicClass.__module__ = module
+
+    # Create an instance
+    mock_packet = DynamicClass()
+
+    # Set attributes
+    mock_packet.apid = apid
+    if name is not None:
+        mock_packet.name = name
+
+    return mock_packet
 
 
 class TestFormatPacketInfo:
@@ -13,71 +41,70 @@ class TestFormatPacketInfo:
 
     def test_format_packet_with_all_attributes(self):
         """Test formatting a packet with all attributes."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test Telemetry Packet"
-        mock_packet._fields = [MagicMock(), MagicMock(), MagicMock()]
+        mock_packet = create_mock_packet(
+            "TestPacket",
+            "ccsds.packets.test",
+            ccsdspy.FixedLength,
+            100,
+            "Test Telemetry Packet"
+        )
 
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 100
-        assert info["type"] == "TestPacket"
+        assert info["packet"] == "ccsds.packets.test.TestPacket"
         assert info["name"] == "Test Telemetry Packet"
-        assert info["module"] == "ccsds.packets.test"
-        assert info["fields"] == 3
+        assert info["definition"] == "FixedLength"
 
     def test_format_packet_without_name(self):
         """Test formatting a packet without name attribute."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "AnonymousPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.generic"
-        mock_packet.apid = 200
-        # Remove name attribute
-        if hasattr(mock_packet, 'name'):
-            delattr(mock_packet, 'name')
-        mock_packet._fields = [MagicMock(), MagicMock()]
+        mock_packet = create_mock_packet(
+            "AnonymousPacket",
+            "ccsds.packets.generic",
+            ccsdspy.VariableLength,
+            200,
+            None  # No name
+        )
 
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 200
-        assert info["type"] == "AnonymousPacket"
+        assert info["packet"] == "ccsds.packets.generic.AnonymousPacket"
         assert info["name"] == ""
-        assert info["fields"] == 2
+        assert info["definition"] == "VariableLength"
 
     def test_format_packet_without_apid(self):
         """Test formatting a packet without apid attribute."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "NoApidPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        if hasattr(mock_packet, 'apid'):
-            delattr(mock_packet, 'apid')
-        mock_packet.name = "No APID"
-        mock_packet._fields = []
+        mock_packet = create_mock_packet(
+            "NoApidPacket",
+            "ccsds.packets.test",
+            ccsdspy.FixedLength,
+            999,  # Will be deleted
+            "No APID"
+        )
+        delattr(mock_packet, 'apid')
 
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == "N/A"
-        assert info["type"] == "NoApidPacket"
+        assert info["packet"] == "ccsds.packets.test.NoApidPacket"
         assert info["name"] == "No APID"
-        assert info["fields"] == 0
+        assert info["definition"] == "FixedLength"
 
-    def test_format_packet_without_fields(self):
-        """Test formatting a packet without _fields attribute."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "NoFieldsPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
+    def test_format_packet_with_object_base(self):
+        """Test formatting a packet with only object as base class."""
+        # Python classes always have at least object as a base
+        mock_class = type("DirectObjectPacket", (object,), {})
+        mock_class.__module__ = "ccsds.packets.test"
+        mock_packet = mock_class()
         mock_packet.apid = 300
-        mock_packet.name = "No Fields"
-        # Remove _fields attribute
-        if hasattr(mock_packet, '_fields'):
-            delattr(mock_packet, '_fields')
+        mock_packet.name = "Direct Object"
 
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 300
-        assert info["fields"] == 0
+        assert info["packet"] == "ccsds.packets.test.DirectObjectPacket"
+        assert info["definition"] == "object"
 
 
 class TestListPackages:
@@ -86,7 +113,7 @@ class TestListPackages:
     def test_list_packages_with_no_parsers(self, capsys):
         """Test list_packages when no parsers are found."""
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[]):
-            result = list_packages(verbose=False)
+            result = list_packages()
 
             assert result == 1
             captured = capsys.readouterr()
@@ -94,53 +121,39 @@ class TestListPackages:
 
     def test_list_packages_with_single_parser(self, capsys):
         """Test list_packages with a single parser."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test Packet"
-        mock_packet._fields = [MagicMock(), MagicMock()]
+        mock_packet = create_mock_packet(
+            "TestPacket",
+            "ccsds.packets.test",
+            ccsdspy.FixedLength,
+            100,
+            "Test Packet"
+        )
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=False)
+            result = list_packages()
 
             assert result == 0
             captured = capsys.readouterr()
             assert "APID" in captured.out
-            assert "TYPE" in captured.out
-            assert "FIELDS" in captured.out
+            assert "PACKET" in captured.out
+            assert "NAME" in captured.out
+            assert "DEFINITION" in captured.out
             assert "100" in captured.out
-            assert "TestPacket" in captured.out
+            assert "ccsds.packets.test.TestPacket" in captured.out
             assert "Test Packet" in captured.out
+            assert "FixedLength" in captured.out
             assert "Total: 1 packet definition(s)" in captured.out
 
     def test_list_packages_with_multiple_parsers_sorted(self, capsys):
         """Test list_packages with multiple parsers sorted by APID."""
-        mock_packet1 = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet1.__class__.__name__ = "Packet200"
-        mock_packet1.__class__.__module__ = "ccsds.packets.test"
-        mock_packet1.apid = 200
-        mock_packet1.name = "Second"
-        mock_packet1._fields = [MagicMock()]
-
-        mock_packet2 = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet2.__class__.__name__ = "Packet100"
-        mock_packet2.__class__.__module__ = "ccsds.packets.test"
-        mock_packet2.apid = 100
-        mock_packet2.name = "First"
-        mock_packet2._fields = [MagicMock(), MagicMock()]
-
-        mock_packet3 = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet3.__class__.__name__ = "Packet150"
-        mock_packet3.__class__.__module__ = "ccsds.packets.test"
-        mock_packet3.apid = 150
-        mock_packet3.name = "Middle"
-        mock_packet3._fields = []
+        mock_packet1 = create_mock_packet("Packet200", "ccsds.packets.test", ccsdspy.FixedLength, 200, "Second")
+        mock_packet2 = create_mock_packet("Packet100", "ccsds.packets.test", ccsdspy.FixedLength, 100, "First")
+        mock_packet3 = create_mock_packet("Packet150", "ccsds.packets.test", ccsdspy.FixedLength, 150, "Middle")
 
         # Pass in unsorted order
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages",
                    return_value=[mock_packet1, mock_packet2, mock_packet3]):
-            result = list_packages(verbose=False)
+            result = list_packages()
 
             assert result == 0
             captured = capsys.readouterr()
@@ -155,46 +168,31 @@ class TestListPackages:
             assert "200" in apid_lines[2]
             assert "Total: 3 packet definition(s)" in captured.out
 
-    def test_list_packages_verbose_includes_module(self, capsys):
-        """Test that verbose mode includes module path."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test.submodule"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
+    def test_list_packages_includes_full_packet_identifier(self, capsys):
+        """Test that output includes full packet identifier (module.class)."""
+        mock_packet = create_mock_packet(
+            "TestPacket",
+            "ccsds.packets.test.submodule",
+            ccsdspy.VariableLength,
+            100,
+            "Test"
+        )
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=True)
+            result = list_packages()
 
             assert result == 0
             captured = capsys.readouterr()
-            assert "MODULE" in captured.out
-            assert "ccsds.packets.test.submodule" in captured.out
-
-    def test_list_packages_non_verbose_excludes_module(self, capsys):
-        """Test that non-verbose mode excludes module path."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
-
-        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=False)
-
-            assert result == 0
-            captured = capsys.readouterr()
-            # MODULE header should not be present in non-verbose mode
-            header_line = [line for line in captured.out.split('\n') if 'APID' in line and 'TYPE' in line][0]
-            assert "MODULE" not in header_line
+            assert "PACKET" in captured.out
+            assert "ccsds.packets.test.submodule.TestPacket" in captured.out
+            assert "DEFINITION" in captured.out
+            assert "VariableLength" in captured.out
 
     def test_list_packages_handles_import_error(self, capsys):
         """Test list_packages when import raises an error."""
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages",
                    side_effect=ImportError("ccsds.packets not found")):
-            result = list_packages(verbose=False)
+            result = list_packages()
 
             assert result == 1
             captured = capsys.readouterr()
@@ -204,7 +202,7 @@ class TestListPackages:
         """Test list_packages when a general exception occurs."""
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages",
                    side_effect=RuntimeError("Something went wrong")):
-            result = list_packages(verbose=False)
+            result = list_packages()
 
             assert result == 1
             captured = capsys.readouterr()
@@ -212,96 +210,48 @@ class TestListPackages:
 
     def test_list_packages_with_csv_delimiter(self, capsys):
         """Test list_packages with CSV delimiter."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test Packet"
-        mock_packet._fields = [MagicMock(), MagicMock()]
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.FixedLength, 100, "Test Packet")
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=False, delimiter=",")
+            result = list_packages(delimiter=",")
 
             assert result == 0
             captured = capsys.readouterr()
             lines = captured.out.strip().split('\n')
 
             # Check header
-            assert lines[0] == "APID,TYPE,FIELDS,NAME"
+            assert lines[0] == "APID,PACKET,NAME,DEFINITION"
             # Check data row
-            assert lines[1] == "100,TestPacket,2,Test Packet"
+            assert lines[1] == "100,ccsds.packets.test.TestPacket,Test Packet,FixedLength"
             # No total count in CSV mode
             assert "Total:" not in captured.out
 
     def test_list_packages_with_tab_delimiter(self, capsys):
         """Test list_packages with tab delimiter."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 200
-        mock_packet.name = "Tab Test"
-        mock_packet._fields = [MagicMock()]
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.VariableLength, 200, "Tab Test")
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=False, delimiter="\t")
+            result = list_packages(delimiter="\t")
 
             assert result == 0
             captured = capsys.readouterr()
             lines = captured.out.strip().split('\n')
 
             # Check header
-            assert lines[0] == "APID\tTYPE\tFIELDS\tNAME"
+            assert lines[0] == "APID\tPACKET\tNAME\tDEFINITION"
             # Check data row
-            assert lines[1] == "200\tTestPacket\t1\tTab Test"
-
-    def test_list_packages_with_delimiter_verbose(self, capsys):
-        """Test list_packages with delimiter in verbose mode."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "VerbosePacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.verbose.test"
-        mock_packet.apid = 300
-        mock_packet.name = "Verbose"
-        mock_packet._fields = []
-
-        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=True, delimiter=",")
-
-            assert result == 0
-            captured = capsys.readouterr()
-            lines = captured.out.strip().split('\n')
-
-            # Check header includes MODULE
-            assert lines[0] == "APID,TYPE,FIELDS,NAME,MODULE"
-            # Check data row includes module
-            assert lines[1] == "300,VerbosePacket,0,Verbose,ccsds.packets.verbose.test"
+            assert lines[1] == "200\tccsds.packets.test.TestPacket\tTab Test\tVariableLength"
 
     def test_list_packages_with_delimiter_multiple_packets_sorted(self, capsys):
         """Test list_packages with delimiter and multiple packets are sorted."""
-        mock_packet1 = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet1.__class__.__name__ = "Packet300"
-        mock_packet1.__class__.__module__ = "ccsds.packets.test"
-        mock_packet1.apid = 300
-        mock_packet1.name = "Third"
-        mock_packet1._fields = []
-
-        mock_packet2 = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet2.__class__.__name__ = "Packet100"
-        mock_packet2.__class__.__module__ = "ccsds.packets.test"
-        mock_packet2.apid = 100
-        mock_packet2.name = "First"
-        mock_packet2._fields = []
-
-        mock_packet3 = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet3.__class__.__name__ = "Packet200"
-        mock_packet3.__class__.__module__ = "ccsds.packets.test"
-        mock_packet3.apid = 200
-        mock_packet3.name = "Second"
-        mock_packet3._fields = []
+        mock_packet1 = create_mock_packet("Packet300", "ccsds.packets.test", ccsdspy.FixedLength, 300, "Third")
+        mock_packet2 = create_mock_packet("Packet100", "ccsds.packets.test", ccsdspy.FixedLength, 100, "First")
+        mock_packet3 = create_mock_packet("Packet200", "ccsds.packets.test", ccsdspy.FixedLength, 200, "Second")
 
         # Pass in unsorted order
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages",
                    return_value=[mock_packet1, mock_packet2, mock_packet3]):
-            result = list_packages(verbose=False, delimiter="|")
+            result = list_packages(delimiter="|")
 
             assert result == 0
             captured = capsys.readouterr()
@@ -314,23 +264,17 @@ class TestListPackages:
 
     def test_list_packages_with_delimiter_empty_name(self, capsys):
         """Test list_packages with delimiter when packet has no name."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "NoNamePacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 400
-        if hasattr(mock_packet, 'name'):
-            delattr(mock_packet, 'name')
-        mock_packet._fields = []
+        mock_packet = create_mock_packet("NoNamePacket", "ccsds.packets.test", ccsdspy.FixedLength, 400, None)
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            result = list_packages(verbose=False, delimiter=",")
+            result = list_packages(delimiter=",")
 
             assert result == 0
             captured = capsys.readouterr()
             lines = captured.out.strip().split('\n')
 
             # Empty name should result in empty field
-            assert lines[1] == "400,NoNamePacket,0,"
+            assert lines[1] == "400,ccsds.packets.test.NoNamePacket,,FixedLength"
 
 
 class TestMain:
@@ -338,45 +282,10 @@ class TestMain:
 
     def test_main_with_no_arguments(self):
         """Test main function with no arguments (default behavior)."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.FixedLength, 100, "Test")
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
             with patch("sys.argv", ["spac-ls"]):
-                with pytest.raises(SystemExit) as exc_info:
-                    main()
-                assert exc_info.value.code == 0
-
-    def test_main_with_verbose_flag(self):
-        """Test main function with verbose flag."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
-
-        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            with patch("sys.argv", ["spac-ls", "-v"]):
-                with pytest.raises(SystemExit) as exc_info:
-                    main()
-                assert exc_info.value.code == 0
-
-    def test_main_with_verbose_long_flag(self):
-        """Test main function with verbose long flag."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
-
-        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            with patch("sys.argv", ["spac-ls", "--verbose"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
@@ -400,30 +309,10 @@ class TestMain:
 
     def test_main_with_delimiter_flag(self):
         """Test main function with delimiter flag."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.FixedLength, 100, "Test")
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
             with patch("sys.argv", ["spac-ls", "-d", ","]):
-                with pytest.raises(SystemExit) as exc_info:
-                    main()
-                assert exc_info.value.code == 0
-
-    def test_main_with_delimiter_and_verbose(self):
-        """Test main function with both delimiter and verbose flags."""
-        mock_packet = MagicMock(spec=ccsdspy.FixedLength)
-        mock_packet.__class__.__name__ = "TestPacket"
-        mock_packet.__class__.__module__ = "ccsds.packets.test"
-        mock_packet.apid = 100
-        mock_packet.name = "Test"
-        mock_packet._fields = []
-
-        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
-            with patch("sys.argv", ["spac-ls", "-v", "--delimiter", "\t"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
