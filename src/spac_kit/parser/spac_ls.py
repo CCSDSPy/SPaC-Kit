@@ -5,8 +5,30 @@ import sys
 from spac_kit.parser.util import import_ccsds_packet_packages
 
 
-def format_packet_info(parser):
-    """Format packet information into a row for display."""
+def format_packet_info(packet_info):
+    """Format packet information into a row for display.
+
+    Args:
+        packet_info: Either a dict with 'packet', 'variable_name', 'module_path' keys,
+                     or a packet object for backward compatibility
+    """
+    # Handle new dict format from import_ccsds_packet_packages
+    if isinstance(packet_info, dict):
+        parser = packet_info['packet']
+        variable_name = packet_info.get('variable_name')
+        module_path = packet_info.get('module_path')
+
+        # Build packet identifier using variable name
+        if variable_name and module_path:
+            packet_id = f"{module_path}.{variable_name}"
+        else:
+            # Fallback
+            packet_id = f"{parser.__class__.__module__}.{parser.__class__.__name__}"
+    else:
+        # Backward compatibility: packet_info is a packet object
+        parser = packet_info
+        packet_id = f"{parser.__class__.__module__}.{parser.__class__.__name__}"
+
     apid = getattr(parser, "apid", "N/A")
     name = getattr(parser, "name", "")
     description = getattr(parser, "description", "")
@@ -17,20 +39,9 @@ def format_packet_info(parser):
     if description is None:
         description = ""
 
-    # Get the packet identifier (module.variable_name)
-    # Use the variable name if available (set by import_ccsds_packet_packages)
-    # Otherwise fall back to module.ClassName for backward compatibility
-    if hasattr(parser, "_spac_variable_name") and hasattr(parser, "_spac_module_path"):
-        packet = f"{parser._spac_module_path}.{parser._spac_variable_name}"
-    else:
-        # Fallback for tests and backward compatibility
-        module = parser.__class__.__module__
-        packet_class = parser.__class__.__name__
-        packet = f"{module}.{packet_class}"
-
     return {
         "apid": apid,
-        "packet": packet,
+        "packet": packet_id,
         "name": name,
         "description": description,
     }

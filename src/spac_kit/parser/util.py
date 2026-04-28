@@ -21,7 +21,7 @@ def import_ccsds_packet_packages():
 
     Stolen from https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-namespace-packages
 
-    @return: the set of the imported packages
+    @return: list of dictionaries with keys: 'packet' (the packet object), 'variable_name', 'module_path'
     """
     import importlib
     import pkgutil
@@ -41,9 +41,10 @@ def import_ccsds_packet_packages():
         members = inspect.getmembers(module, is_ccsds_packet)
         for var_name, member in members:
             if hasattr(member, "apid"):
-                # Store the variable name and module path for later use
-                member._spac_variable_name = var_name
-                member._spac_module_path = name
-                parsers.append(member)
+                parsers.append({
+                    'packet': member,
+                    'variable_name': var_name,
+                    'module_path': name
+                })
 
     return parsers
