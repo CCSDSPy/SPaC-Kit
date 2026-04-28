@@ -56,7 +56,7 @@ class TestFormatPacketInfo:
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 100
-        assert info["packet"] == "ccsds.packets.test.TestPacket"
+        assert info["packet"] == "test.TestPacket"
         assert info["name"] == "Test Telemetry Packet"
         assert info["description"] == "Fixed length telemetry packet"
 
@@ -74,7 +74,7 @@ class TestFormatPacketInfo:
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 200
-        assert info["packet"] == "ccsds.packets.generic.AnonymousPacket"
+        assert info["packet"] == "generic.AnonymousPacket"
         assert info["name"] == ""
         assert info["description"] == "Variable length packet"
 
@@ -93,7 +93,7 @@ class TestFormatPacketInfo:
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == "N/A"
-        assert info["packet"] == "ccsds.packets.test.NoApidPacket"
+        assert info["packet"] == "test.NoApidPacket"
         assert info["name"] == "No APID"
         assert info["description"] == "Packet without APID"
 
@@ -110,7 +110,7 @@ class TestFormatPacketInfo:
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 300
-        assert info["packet"] == "ccsds.packets.test.DirectObjectPacket"
+        assert info["packet"] == "test.DirectObjectPacket"
         assert info["name"] == "Direct Object"
         assert info["description"] == ""
 
@@ -126,7 +126,7 @@ class TestFormatPacketInfo:
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 400
-        assert info["packet"] == "ccsds.packets.test.NoneNamePacket"
+        assert info["packet"] == "test.NoneNamePacket"
         assert info["name"] == ""
         assert info["description"] == "Test description"
 
@@ -142,7 +142,7 @@ class TestFormatPacketInfo:
         info = format_packet_info(mock_packet)
 
         assert info["apid"] == 500
-        assert info["packet"] == "ccsds.packets.test.NoneDescPacket"
+        assert info["packet"] == "test.NoneDescPacket"
         assert info["name"] == "Test Name"
         assert info["description"] == ""
 
@@ -180,7 +180,7 @@ class TestListPackages:
             assert "NAME" in captured.out
             assert "DESCRIPTION" in captured.out
             assert "100" in captured.out
-            assert "ccsds.packets.test.TestPacket" in captured.out
+            assert "test.TestPacket" in captured.out
             assert "Test Packet" in captured.out
             assert "A test packet" in captured.out
             assert "Total: 1 packet definition(s)" in captured.out
@@ -226,7 +226,7 @@ class TestListPackages:
             assert result == 0
             captured = capsys.readouterr()
             assert "PACKET" in captured.out
-            assert "ccsds.packets.test.submodule.TestPacket" in captured.out
+            assert "test.submodule.TestPacket" in captured.out
             assert "DESCRIPTION" in captured.out
             assert "Variable length test packet" in captured.out
 
@@ -264,7 +264,7 @@ class TestListPackages:
             # Check header
             assert lines[0] == "APID,PACKET,NAME,DESCRIPTION"
             # Check data row
-            assert lines[1] == "100,ccsds.packets.test.TestPacket,Test Packet,A test packet for CSV"
+            assert lines[1] == "100,test.TestPacket,Test Packet,A test packet for CSV"
             # No total count in CSV mode
             assert "Total:" not in captured.out
 
@@ -282,7 +282,7 @@ class TestListPackages:
             # Check header
             assert lines[0] == "APID\tPACKET\tNAME\tDESCRIPTION"
             # Check data row
-            assert lines[1] == "200\tccsds.packets.test.TestPacket\tTab Test\tTab delimited test packet"
+            assert lines[1] == "200\ttest.TestPacket\tTab Test\tTab delimited test packet"
 
     def test_list_packages_with_delimiter_multiple_packets_sorted(self, capsys):
         """Test list_packages with delimiter and multiple packets are sorted."""
@@ -316,7 +316,7 @@ class TestListPackages:
             lines = captured.out.strip().split('\n')
 
             # Empty name should result in empty field
-            assert lines[1] == "400,ccsds.packets.test.NoNamePacket,,Packet without a name"
+            assert lines[1] == "400,test.NoNamePacket,,Packet without a name"
 
     def test_list_packages_with_none_attributes(self, capsys):
         """Test list_packages when packet has None for name and description."""
@@ -335,7 +335,7 @@ class TestListPackages:
             captured = capsys.readouterr()
             # Should not crash and should handle None values as empty strings
             assert "500" in captured.out
-            assert "ccsds.packets.test.NullAttributePacket" in captured.out
+            assert "test.NullAttributePacket" in captured.out
 
 
 class TestMain:

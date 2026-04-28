@@ -20,14 +20,18 @@ def format_packet_info(packet_info):
 
         # Build packet identifier using variable name
         if variable_name and module_path:
-            packet_id = f"{module_path}.{variable_name}"
+            # Remove the redundant "ccsds.packets." prefix
+            trimmed_path = module_path.removeprefix("ccsds.packets.")
+            packet_id = f"{trimmed_path}.{variable_name}"
         else:
             # Fallback
-            packet_id = f"{parser.__class__.__module__}.{parser.__class__.__name__}"
+            module = parser.__class__.__module__.removeprefix("ccsds.packets.")
+            packet_id = f"{module}.{parser.__class__.__name__}"
     else:
         # Backward compatibility: packet_info is a packet object
         parser = packet_info
-        packet_id = f"{parser.__class__.__module__}.{parser.__class__.__name__}"
+        module = parser.__class__.__module__.removeprefix("ccsds.packets.")
+        packet_id = f"{module}.{parser.__class__.__name__}"
 
     apid = getattr(parser, "apid", "N/A")
     name = getattr(parser, "name", "")
