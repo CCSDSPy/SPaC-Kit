@@ -39,8 +39,11 @@ def import_ccsds_packet_packages():
     ):
         module = importlib.import_module(name)
         members = inspect.getmembers(module, is_ccsds_packet)
-        for _, member in members:
+        for var_name, member in members:
             if hasattr(member, "apid"):
+                # Store the variable name and module path for later use
+                member._spac_variable_name = var_name
+                member._spac_module_path = name
                 parsers.append(member)
 
     return parsers

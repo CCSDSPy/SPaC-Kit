@@ -8,10 +8,8 @@ from spac_kit.parser.util import import_ccsds_packet_packages
 def format_packet_info(parser):
     """Format packet information into a row for display."""
     apid = getattr(parser, "apid", "N/A")
-    packet_class = parser.__class__.__name__
     name = getattr(parser, "name", "")
     description = getattr(parser, "description", "")
-    module = parser.__class__.__module__
 
     # Handle None values - convert to empty strings
     if name is None:
@@ -19,8 +17,16 @@ def format_packet_info(parser):
     if description is None:
         description = ""
 
-    # Full packet identifier (module + class)
-    packet = f"{module}.{packet_class}"
+    # Get the packet identifier (module.variable_name)
+    # Use the variable name if available (set by import_ccsds_packet_packages)
+    # Otherwise fall back to module.ClassName for backward compatibility
+    if hasattr(parser, "_spac_variable_name") and hasattr(parser, "_spac_module_path"):
+        packet = f"{parser._spac_module_path}.{parser._spac_variable_name}"
+    else:
+        # Fallback for tests and backward compatibility
+        module = parser.__class__.__module__
+        packet_class = parser.__class__.__name__
+        packet = f"{module}.{packet_class}"
 
     return {
         "apid": apid,
