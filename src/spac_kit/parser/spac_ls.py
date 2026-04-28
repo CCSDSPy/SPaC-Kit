@@ -13,6 +13,12 @@ def format_packet_info(parser):
     description = getattr(parser, "description", "")
     module = parser.__class__.__module__
 
+    # Handle None values - convert to empty strings
+    if name is None:
+        name = ""
+    if description is None:
+        description = ""
+
     # Full packet identifier (module + class)
     packet = f"{module}.{packet_class}"
 

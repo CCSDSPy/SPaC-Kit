@@ -114,6 +114,38 @@ class TestFormatPacketInfo:
         assert info["name"] == "Direct Object"
         assert info["description"] == ""
 
+    def test_format_packet_with_none_name(self):
+        """Test formatting a packet where name attribute is explicitly None."""
+        mock_class = type("NoneNamePacket", (object,), {})
+        mock_class.__module__ = "ccsds.packets.test"
+        mock_packet = mock_class()
+        mock_packet.apid = 400
+        mock_packet.name = None  # Explicitly None
+        mock_packet.description = "Test description"
+
+        info = format_packet_info(mock_packet)
+
+        assert info["apid"] == 400
+        assert info["packet"] == "ccsds.packets.test.NoneNamePacket"
+        assert info["name"] == ""
+        assert info["description"] == "Test description"
+
+    def test_format_packet_with_none_description(self):
+        """Test formatting a packet where description attribute is explicitly None."""
+        mock_class = type("NoneDescPacket", (object,), {})
+        mock_class.__module__ = "ccsds.packets.test"
+        mock_packet = mock_class()
+        mock_packet.apid = 500
+        mock_packet.name = "Test Name"
+        mock_packet.description = None  # Explicitly None
+
+        info = format_packet_info(mock_packet)
+
+        assert info["apid"] == 500
+        assert info["packet"] == "ccsds.packets.test.NoneDescPacket"
+        assert info["name"] == "Test Name"
+        assert info["description"] == ""
+
 
 class TestListPackages:
     """Tests for list_packages function."""
@@ -285,6 +317,25 @@ class TestListPackages:
 
             # Empty name should result in empty field
             assert lines[1] == "400,ccsds.packets.test.NoNamePacket,,Packet without a name"
+
+    def test_list_packages_with_none_attributes(self, capsys):
+        """Test list_packages when packet has None for name and description."""
+        # Create mock packet with None attributes
+        mock_class = type("NullAttributePacket", (object,), {})
+        mock_class.__module__ = "ccsds.packets.test"
+        mock_packet = mock_class()
+        mock_packet.apid = 500
+        mock_packet.name = None  # Explicitly None
+        mock_packet.description = None  # Explicitly None
+
+        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
+            result = list_packages()
+
+            assert result == 0
+            captured = capsys.readouterr()
+            # Should not crash and should handle None values as empty strings
+            assert "500" in captured.out
+            assert "ccsds.packets.test.NullAttributePacket" in captured.out
 
 
 class TestMain:
