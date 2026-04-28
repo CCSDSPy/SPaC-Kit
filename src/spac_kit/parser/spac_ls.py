@@ -5,12 +5,13 @@ import sys
 from spac_kit.parser.util import import_ccsds_packet_packages
 
 
-def format_packet_info(packet_info):
+def format_packet_info(packet_info, long_format=False):
     """Format packet information into a row for display.
 
     Args:
         packet_info: Either a dict with 'packet', 'variable_name', 'module_path' keys,
                      or a packet object for backward compatibility
+        long_format: If True, include additional fields like packet type and field count
     """
     # Handle new dict format from import_ccsds_packet_packages
     if isinstance(packet_info, dict):
@@ -43,19 +44,36 @@ def format_packet_info(packet_info):
     if description is None:
         description = ""
 
-    return {
+    result = {
         "apid": apid,
         "packet": packet_id,
         "name": name,
         "description": description,
     }
 
+    # Add extra fields for long format
+    if long_format:
+        # Get packet type
+        packet_type = parser.__class__.__name__
+        result["type"] = packet_type
 
-def list_packages(delimiter=None):
+        # Get field count
+        fields = getattr(parser, "_fields", [])
+        result["fields"] = len(fields)
+
+        # Get field names
+        field_names = [getattr(f, "_name", "?") for f in fields]
+        result["field_names"] = ", ".join(field_names) if field_names else ""
+
+    return result
+
+
+def list_packages(delimiter=None, long_format=False):
     """List all available CCSDS packet packages.
 
     Args:
         delimiter: If specified, output as delimited format (e.g., ',' for CSV, '\t' for TSV)
+        long_format: If True, display additional fields like packet type and field information
     """
     try:
         parsers = import_ccsds_packet_packages()
@@ -66,7 +84,7 @@ def list_packages(delimiter=None):
             return 1
 
         # Collect packet information
-        packet_info = [format_packet_info(parser) for parser in parsers]
+        packet_info = [format_packet_info(parser, long_format=long_format) for parser in parsers]
 
         # Sort by APID
         packet_info.sort(key=lambda x: (x["apid"] if isinstance(x["apid"], int) else float('inf')))
@@ -74,10 +92,14 @@ def list_packages(delimiter=None):
         if delimiter:
             # CSV/delimited output format
             headers = ["APID", "PACKET", "NAME", "DESCRIPTION"]
+            if long_format:
+                headers.extend(["TYPE", "FIELDS", "FIELD_NAMES"])
             print(delimiter.join(headers))
 
             for info in packet_info:
                 row = [str(info["apid"]), info["packet"], info["name"], info["description"]]
+                if long_format:
+                    row.extend([info["type"], str(info["fields"]), info["field_names"]])
                 print(delimiter.join(row))
         else:
             # Table format output
@@ -94,8 +116,18 @@ def list_packages(delimiter=None):
             description_width = max(len(p["description"]) for p in packet_info)
             description_width = max(description_width, len("DESCRIPTION"))
 
-            # Print header
-            header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  DESCRIPTION"
+            if long_format:
+                type_width = max(len(p["type"]) for p in packet_info)
+                type_width = max(type_width, len("TYPE"))
+
+                fields_width = max(len(str(p["fields"])) for p in packet_info)
+                fields_width = max(fields_width, len("FIELDS"))
+
+                # Print header
+                header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  {'DESCRIPTION':<{description_width}}  {'TYPE':<{type_width}}  {'FIELDS':<{fields_width}}  FIELD_NAMES"
+            else:
+                # Print header
+                header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  DESCRIPTION"
 
             print(header)
             print("-" * len(header))
@@ -103,7 +135,10 @@ def list_packages(delimiter=None):
             # Print each packet
             for info in packet_info:
                 apid_str = str(info["apid"])
-                line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['description']}"
+                if long_format:
+                    line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['description']:<{description_width}}  {info['type']:<{type_width}}  {info['fields']:<{fields_width}}  {info['field_names']}"
+                else:
+                    line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['description']}"
                 print(line)
 
             print(f"\nTotal: {len(parsers)} packet definition(s)")
@@ -127,10 +162,17 @@ def get_parser():
         epilog="""
 Examples:
   spac-ls                List all available packet definitions
+  spac-ls -l             List with additional packet details (type, fields)
   spac-ls -d ","         Output as CSV format
+  spac-ls -l -d ","      Output as CSV with additional fields
   spac-ls -d $'\\t'      Output as TSV (tab-separated) format
   spac-ls -d "," > out.csv  Save CSV output to file
         """
+    )
+    parser.add_argument(
+        "-l", "--long",
+        action="store_true",
+        help="Display additional fields including packet type, field count, and field names"
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -150,7 +192,7 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    sys.exit(list_packages(delimiter=args.delimiter))
+    sys.exit(list_packages(delimiter=args.delimiter, long_format=args.long))
 
 
 if __name__ == "__main__":

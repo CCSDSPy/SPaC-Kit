@@ -146,6 +146,32 @@ class TestFormatPacketInfo:
         assert info["name"] == "Test Name"
         assert info["description"] == ""
 
+    def test_format_packet_with_long_format(self):
+        """Test formatting a packet with long format enabled."""
+        mock_packet = create_mock_packet(
+            "TestPacket",
+            "ccsds.packets.test",
+            ccsdspy.FixedLength,
+            100,
+            "Test Packet",
+            "Test description"
+        )
+
+        # Add mock fields to simulate packet fields
+        mock_field1 = type("MockField", (object,), {"_name": "field1"})()
+        mock_field2 = type("MockField", (object,), {"_name": "field2"})()
+        mock_packet._fields = [mock_field1, mock_field2]
+
+        info = format_packet_info(mock_packet, long_format=True)
+
+        assert info["apid"] == 100
+        assert info["packet"] == "test.TestPacket"
+        assert info["name"] == "Test Packet"
+        assert info["description"] == "Test description"
+        assert info["type"] == "TestPacket"  # The class name, not base class
+        assert info["fields"] == 2
+        assert info["field_names"] == "field1, field2"
+
 
 class TestListPackages:
     """Tests for list_packages function."""
@@ -337,6 +363,46 @@ class TestListPackages:
             assert "500" in captured.out
             assert "test.NullAttributePacket" in captured.out
 
+    def test_list_packages_with_long_format(self, capsys):
+        """Test list_packages with long format enabled."""
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.FixedLength, 100, "Test", "Test description")
+
+        # Add mock fields
+        mock_field1 = type("MockField", (object,), {"_name": "field1"})()
+        mock_field2 = type("MockField", (object,), {"_name": "field2"})()
+        mock_packet._fields = [mock_field1, mock_field2]
+
+        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
+            result = list_packages(long_format=True)
+
+            assert result == 0
+            captured = capsys.readouterr()
+            assert "TYPE" in captured.out
+            assert "FIELDS" in captured.out
+            assert "FIELD_NAMES" in captured.out
+            assert "TestPacket" in captured.out  # The class name
+            assert "field1, field2" in captured.out
+
+    def test_list_packages_with_long_format_csv(self, capsys):
+        """Test list_packages with long format and CSV delimiter."""
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.VariableLength, 200, "Test", "Test description")
+
+        # Add mock fields
+        mock_field = type("MockField", (object,), {"_name": "test_field"})()
+        mock_packet._fields = [mock_field]
+
+        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
+            result = list_packages(delimiter=",", long_format=True)
+
+            assert result == 0
+            captured = capsys.readouterr()
+            lines = captured.out.strip().split('\n')
+
+            # Check header includes long format fields
+            assert lines[0] == "APID,PACKET,NAME,DESCRIPTION,TYPE,FIELDS,FIELD_NAMES"
+            # Check data row includes long format fields (TestPacket is the class name)
+            assert "200,test.TestPacket,Test,Test description,TestPacket,1,test_field" in lines[1]
+
 
 class TestMain:
     """Tests for main CLI entry point."""
@@ -374,6 +440,30 @@ class TestMain:
 
         with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
             with patch("sys.argv", ["spac-ls", "-d", ","]):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+
+    def test_main_with_long_flag(self):
+        """Test main function with long format flag."""
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.FixedLength, 100, "Test", "Test description")
+        mock_field = type("MockField", (object,), {"_name": "field1"})()
+        mock_packet._fields = [mock_field]
+
+        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
+            with patch("sys.argv", ["spac-ls", "-l"]):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+
+    def test_main_with_long_and_delimiter_flags(self):
+        """Test main function with both long format and delimiter flags."""
+        mock_packet = create_mock_packet("TestPacket", "ccsds.packets.test", ccsdspy.VariableLength, 200, "Test", "Test description")
+        mock_field = type("MockField", (object,), {"_name": "field1"})()
+        mock_packet._fields = [mock_field]
+
+        with patch("spac_kit.parser.spac_ls.import_ccsds_packet_packages", return_value=[mock_packet]):
+            with patch("sys.argv", ["spac-ls", "-l", "-d", ","]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
