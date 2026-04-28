@@ -10,13 +10,11 @@ def format_packet_info(parser):
     apid = getattr(parser, "apid", "N/A")
     packet_class = parser.__class__.__name__
     name = getattr(parser, "name", "")
+    description = getattr(parser, "description", "")
     module = parser.__class__.__module__
 
     # Full packet identifier (module + class)
     packet = f"{module}.{packet_class}"
-
-    # Get the packet description (base class type)
-    description = parser.__class__.__bases__[0].__name__ if parser.__class__.__bases__ else "Unknown"
 
     return {
         "apid": apid,
