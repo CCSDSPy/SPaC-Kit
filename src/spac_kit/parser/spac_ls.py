@@ -15,14 +15,14 @@ def format_packet_info(parser):
     # Full packet identifier (module + class)
     packet = f"{module}.{packet_class}"
 
-    # Get the packet definition type (base class)
-    definition = parser.__class__.__bases__[0].__name__ if parser.__class__.__bases__ else "Unknown"
+    # Get the packet description (base class type)
+    description = parser.__class__.__bases__[0].__name__ if parser.__class__.__bases__ else "Unknown"
 
     return {
         "apid": apid,
         "packet": packet,
         "name": name,
-        "definition": definition,
+        "description": description,
     }
 
 
@@ -48,11 +48,11 @@ def list_packages(delimiter=None):
 
         if delimiter:
             # CSV/delimited output format
-            headers = ["APID", "PACKET", "NAME", "DEFINITION"]
+            headers = ["APID", "PACKET", "NAME", "DESCRIPTION"]
             print(delimiter.join(headers))
 
             for info in packet_info:
-                row = [str(info["apid"]), info["packet"], info["name"], info["definition"]]
+                row = [str(info["apid"]), info["packet"], info["name"], info["description"]]
                 print(delimiter.join(row))
         else:
             # Table format output
@@ -66,11 +66,11 @@ def list_packages(delimiter=None):
             name_width = max(len(p["name"]) for p in packet_info)
             name_width = max(name_width, len("NAME"))
 
-            definition_width = max(len(p["definition"]) for p in packet_info)
-            definition_width = max(definition_width, len("DEFINITION"))
+            description_width = max(len(p["description"]) for p in packet_info)
+            description_width = max(description_width, len("DESCRIPTION"))
 
             # Print header
-            header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  DEFINITION"
+            header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  DESCRIPTION"
 
             print(header)
             print("-" * len(header))
@@ -78,7 +78,7 @@ def list_packages(delimiter=None):
             # Print each packet
             for info in packet_info:
                 apid_str = str(info["apid"])
-                line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['definition']}"
+                line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['description']}"
                 print(line)
 
             print(f"\nTotal: {len(parsers)} packet definition(s)")

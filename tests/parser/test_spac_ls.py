@@ -54,7 +54,7 @@ class TestFormatPacketInfo:
         assert info["apid"] == 100
         assert info["packet"] == "ccsds.packets.test.TestPacket"
         assert info["name"] == "Test Telemetry Packet"
-        assert info["definition"] == "FixedLength"
+        assert info["description"] == "FixedLength"
 
     def test_format_packet_without_name(self):
         """Test formatting a packet without name attribute."""
@@ -71,7 +71,7 @@ class TestFormatPacketInfo:
         assert info["apid"] == 200
         assert info["packet"] == "ccsds.packets.generic.AnonymousPacket"
         assert info["name"] == ""
-        assert info["definition"] == "VariableLength"
+        assert info["description"] == "VariableLength"
 
     def test_format_packet_without_apid(self):
         """Test formatting a packet without apid attribute."""
@@ -89,7 +89,7 @@ class TestFormatPacketInfo:
         assert info["apid"] == "N/A"
         assert info["packet"] == "ccsds.packets.test.NoApidPacket"
         assert info["name"] == "No APID"
-        assert info["definition"] == "FixedLength"
+        assert info["description"] == "FixedLength"
 
     def test_format_packet_with_object_base(self):
         """Test formatting a packet with only object as base class."""
@@ -104,7 +104,7 @@ class TestFormatPacketInfo:
 
         assert info["apid"] == 300
         assert info["packet"] == "ccsds.packets.test.DirectObjectPacket"
-        assert info["definition"] == "object"
+        assert info["description"] == "object"
 
 
 class TestListPackages:
@@ -137,7 +137,7 @@ class TestListPackages:
             assert "APID" in captured.out
             assert "PACKET" in captured.out
             assert "NAME" in captured.out
-            assert "DEFINITION" in captured.out
+            assert "DESCRIPTION" in captured.out
             assert "100" in captured.out
             assert "ccsds.packets.test.TestPacket" in captured.out
             assert "Test Packet" in captured.out
@@ -185,7 +185,7 @@ class TestListPackages:
             captured = capsys.readouterr()
             assert "PACKET" in captured.out
             assert "ccsds.packets.test.submodule.TestPacket" in captured.out
-            assert "DEFINITION" in captured.out
+            assert "DESCRIPTION" in captured.out
             assert "VariableLength" in captured.out
 
     def test_list_packages_handles_import_error(self, capsys):
@@ -220,7 +220,7 @@ class TestListPackages:
             lines = captured.out.strip().split('\n')
 
             # Check header
-            assert lines[0] == "APID,PACKET,NAME,DEFINITION"
+            assert lines[0] == "APID,PACKET,NAME,DESCRIPTION"
             # Check data row
             assert lines[1] == "100,ccsds.packets.test.TestPacket,Test Packet,FixedLength"
             # No total count in CSV mode
@@ -238,7 +238,7 @@ class TestListPackages:
             lines = captured.out.strip().split('\n')
 
             # Check header
-            assert lines[0] == "APID\tPACKET\tNAME\tDEFINITION"
+            assert lines[0] == "APID\tPACKET\tNAME\tDESCRIPTION"
             # Check data row
             assert lines[1] == "200\tccsds.packets.test.TestPacket\tTab Test\tVariableLength"
 
