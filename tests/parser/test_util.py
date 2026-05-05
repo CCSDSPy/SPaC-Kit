@@ -3,6 +3,7 @@ import io
 import struct
 from unittest.mock import MagicMock, patch
 
+import pytest
 import ccsdspy
 from ccsdspy.constants import BITS_PER_BYTE
 from spac_kit.parser.util import default_pkt, import_ccsds_packet_packages
