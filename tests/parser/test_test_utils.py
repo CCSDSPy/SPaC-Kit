@@ -144,25 +144,3 @@ class TestRecursiveCompare:
 
         # Should not raise because check_dtype=False in implementation
         recursive_compare(dfs, dfs_expected)
-
-
-class TestCompareFunction:
-    """Tests for the compare function.
-
-    Note: These are limited integration tests as compare() requires
-    actual file system setup with in.bin and out.pickle files.
-    """
-
-    def test_compare_with_test_directory(self):
-        """Test compare function with a temporary test directory.
-
-        Note: This test requires ccsds.packets plugin module.
-        """
-        pytest.skip("Requires ccsds.packets plugin module - skipping integration test")
-
-    def test_compare_create_output_flag(self):
-        """Test compare function with create_output=True.
-
-        Note: This test requires ccsds.packets plugin module.
-        """
-        pytest.skip("Requires ccsds.packets plugin module - skipping integration test")
