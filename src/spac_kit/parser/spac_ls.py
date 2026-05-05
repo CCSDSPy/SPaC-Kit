@@ -72,22 +72,32 @@ def list_packages(delimiter=None, long_format=False):
     """List all available CCSDS packet packages.
 
     Args:
-        delimiter: If specified, output as delimited format (e.g., ',' for CSV, '\t' for TSV)
-        long_format: If True, display additional fields like packet type and field information
+        delimiter: If specified, output as delimited format
+                   (e.g., ',' for CSV, '\t' for TSV)
+        long_format: If True, display additional fields like
+                     packet type and field information
     """
     try:
         parsers = import_ccsds_packet_packages()
 
         if not parsers:
             print("No CCSDS packet packages found.")
-            print("Ensure that packet definitions are available in the ccsds.packets namespace.")
+            print("Ensure that packet definitions are available in the "
+                  "ccsds.packets namespace.")
             return 1
 
         # Collect packet information
-        packet_info = [format_packet_info(parser, long_format=long_format) for parser in parsers]
+        packet_info = [
+            format_packet_info(parser, long_format=long_format)
+            for parser in parsers
+        ]
 
         # Sort by APID
-        packet_info.sort(key=lambda x: (x["apid"] if isinstance(x["apid"], int) else float('inf')))
+        packet_info.sort(
+            key=lambda x: (
+                x["apid"] if isinstance(x["apid"], int) else float('inf')
+            )
+        )
 
         if delimiter:
             # CSV/delimited output format
@@ -97,9 +107,15 @@ def list_packages(delimiter=None, long_format=False):
             print(delimiter.join(headers))
 
             for info in packet_info:
-                row = [str(info["apid"]), info["packet"], info["name"], info["description"]]
+                row = [
+                    str(info["apid"]), info["packet"],
+                    info["name"], info["description"]
+                ]
                 if long_format:
-                    row.extend([info["type"], str(info["fields"]), info["field_names"]])
+                    row.extend([
+                        info["type"], str(info["fields"]),
+                        info["field_names"]
+                    ])
                 print(delimiter.join(row))
         else:
             # Table format output
@@ -124,10 +140,19 @@ def list_packages(delimiter=None, long_format=False):
                 fields_width = max(fields_width, len("FIELDS"))
 
                 # Print header
-                header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  {'DESCRIPTION':<{description_width}}  {'TYPE':<{type_width}}  {'FIELDS':<{fields_width}}  FIELD_NAMES"
+                header = (
+                    f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  "
+                    f"{'NAME':<{name_width}}  "
+                    f"{'DESCRIPTION':<{description_width}}  "
+                    f"{'TYPE':<{type_width}}  "
+                    f"{'FIELDS':<{fields_width}}  FIELD_NAMES"
+                )
             else:
                 # Print header
-                header = f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  {'NAME':<{name_width}}  DESCRIPTION"
+                header = (
+                    f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  "
+                    f"{'NAME':<{name_width}}  DESCRIPTION"
+                )
 
             print(header)
             print("-" * len(header))
@@ -136,9 +161,22 @@ def list_packages(delimiter=None, long_format=False):
             for info in packet_info:
                 apid_str = str(info["apid"])
                 if long_format:
-                    line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['description']:<{description_width}}  {info['type']:<{type_width}}  {info['fields']:<{fields_width}}  {info['field_names']}"
+                    line = (
+                        f"{apid_str:<{apid_width}}  "
+                        f"{info['packet']:<{packet_width}}  "
+                        f"{info['name']:<{name_width}}  "
+                        f"{info['description']:<{description_width}}  "
+                        f"{info['type']:<{type_width}}  "
+                        f"{info['fields']:<{fields_width}}  "
+                        f"{info['field_names']}"
+                    )
                 else:
-                    line = f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  {info['name']:<{name_width}}  {info['description']}"
+                    line = (
+                        f"{apid_str:<{apid_width}}  "
+                        f"{info['packet']:<{packet_width}}  "
+                        f"{info['name']:<{name_width}}  "
+                        f"{info['description']}"
+                    )
                 print(line)
 
             print(f"\nTotal: {len(parsers)} packet definition(s)")
@@ -146,8 +184,10 @@ def list_packages(delimiter=None, long_format=False):
         return 0
 
     except ImportError as e:
-        print(f"Error: Unable to import ccsds.packets namespace: {e}", file=sys.stderr)
-        print("Ensure that packet definitions are installed and available.", file=sys.stderr)
+        print(f"Error: Unable to import ccsds.packets namespace: {e}",
+              file=sys.stderr)
+        print("Ensure that packet definitions are installed and available.",
+              file=sys.stderr)
         return 1
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -172,7 +212,8 @@ Examples:
     parser.add_argument(
         "-l", "--long",
         action="store_true",
-        help="Display additional fields including packet type, field count, and field names"
+        help="Display additional fields including packet type, field count, "
+             "and field names"
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -182,7 +223,8 @@ Examples:
     parser.add_argument(
         "-d", "--delimiter",
         type=str,
-        help="Output as delimited format with specified delimiter (e.g., ',' for CSV, '\\t' for TSV)"
+        help="Output as delimited format with specified delimiter "
+             "(e.g., ',' for CSV, '\\t' for TSV)"
     )
     return parser
 

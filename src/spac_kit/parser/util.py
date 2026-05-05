@@ -17,11 +17,13 @@ default_pkt = ccsdspy.VariableLength(
 
 
 def import_ccsds_packet_packages():
-    """Import of the subpackages of ccsds.packets which are meant to contain the CCSDSpy packet definitions.
+    """Import subpackages of ccsds.packets containing CCSDSpy definitions.
 
-    Stolen from https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-namespace-packages
+    Stolen from https://packaging.python.org/en/latest/guides/
+    creating-and-discovering-plugins/#using-namespace-packages
 
-    @return: list of dictionaries with keys: 'packet' (the packet object), 'variable_name', 'module_path'
+    @return: list of dictionaries with keys: 'packet' (the packet object),
+             'variable_name', 'module_path'
     """
     import importlib
     import pkgutil
