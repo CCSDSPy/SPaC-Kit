@@ -68,12 +68,16 @@ For example in command line:
 
     python3 -m venv venv
     source venv/bin/activate
+    pip install -e '.[dev]'
 
-#### Install the latest development version of CCSDSPy (optionnal)
+Alternatively, with `poetry`:
 
-To install the latest version of CCSDSPy:
+    poetry env use python3.12
+    poetry install --with dev
 
-    pip install git+https://github.com/CCSDSPy/ccsdspy.git
+Then prefix your commands with `poetry run` to use the virtual environment, for example:
+
+    poetry run spac-parse --help
 
 
 #### Deploy the project, for developers
@@ -82,7 +86,7 @@ Clone the repository
 
 Install the package
 
-    pip install -e '.[dev]'
+
     pre-commit install && pre-commit install -t pre-push
 
 Run an example:
@@ -96,6 +100,10 @@ or
 or
 
     spac-parse --file ./data/ecm_mag_testcase6_cmds_split_out.log --bdsem --header
+
+With poetry, update the `poetry.lock` before commiting and pushing to the github repository:
+
+    poetry lock
 
 
 #### Build and publish the package
