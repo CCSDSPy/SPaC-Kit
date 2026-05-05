@@ -46,6 +46,18 @@ dev = [
     "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
+    "pylint~=4.0.5",
+    "pre-commit>=3.0.0"
+]
+
+# duplicate section to satisfy both Poetry and PEP 621 tools
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "pylint~=4.0.5",
     "pre-commit>=3.0.0"
 ]
 

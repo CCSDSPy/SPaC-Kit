@@ -4,7 +4,6 @@ import struct
 from unittest.mock import MagicMock, patch
 
 import ccsdspy
-import pytest
 from ccsdspy.constants import BITS_PER_BYTE
 from spac_kit.parser.util import default_pkt, import_ccsds_packet_packages
 
@@ -76,15 +75,6 @@ class TestDefaultPkt:
 
         # Should have parsed 3 packets
         assert len(result["CCSDS_APID"]) == 3
-
-    def test_default_pkt_with_empty_input(self):
-        """Test default_pkt behavior with empty input.
-
-        Note: ccsdspy raises IndexError on empty input, so we skip this test.
-        """
-        pytest.skip(
-            "ccsdspy raises IndexError on empty input, which is expected behavior"
-        )
 
     def test_default_pkt_array_shape_expand(self):
         """Test that the data field uses 'expand' array shape."""
