@@ -28,7 +28,7 @@ repos:
     hooks:
     -   id: lint
         name: Flake8
-        entry: flake8
+        entry: poetry run flake8
         language: system
         types: [python]
         exclude: 'test/|docs/'
