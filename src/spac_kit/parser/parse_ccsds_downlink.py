@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import gc
-import inspect
 import io
 import logging
 
@@ -10,7 +9,7 @@ import ccsdspy
 import crccheck
 import numpy as np
 import pandas as pd
-from spac_kit.parser.util import default_pkt
+from spac_kit.parser.util import default_pkt, import_ccsds_packet_packages
 
 logger = logging.getLogger(__name__)
 
@@ -187,40 +186,6 @@ def calculate_crc(f, crc_size_bytes=2):
     except IndexError as e:
         logger.warning("Unable to parse packet to calculate CRC")
         raise CRCNotCalculatedError("Unable to parse packet to calculate CRC") from e
-
-
-def import_ccsds_packet_packages():
-    """
-    Import of the subpackages of ccsds.packets which are meant to
-    contain the CCSDSpy packet definitions.
-
-    Stolen from:
-    https://packaging.python.org/en/latest/guides/
-    creating-and-discovering-plugins/#using-namespace-packages
-
-    @return: the set of the imported packages
-    """
-    import importlib
-    import pkgutil
-
-    # TODO: use a constant for ccsds.packets
-    import ccsds.packets  # noqa
-
-    parsers = []
-
-    def is_ccsds_packet(attr):
-        return isinstance(attr, ccsdspy.packet_types._BasePacket)
-
-    for _, name, _ in pkgutil.walk_packages(
-        ccsds.packets.__path__, ccsds.packets.__name__ + "."
-    ):
-        module = importlib.import_module(name)
-        members = inspect.getmembers(module, is_ccsds_packet)
-        for _, member in members:
-            if hasattr(member, "apid"):
-                parsers.append(member)
-
-    return parsers
 
 
 def get_packet_definitions():
