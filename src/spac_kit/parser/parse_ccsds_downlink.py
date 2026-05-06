@@ -262,7 +262,7 @@ def distribute_packets(keyss, stream1):
     rows = ccsdspy.utils.split_packet_bytes(stream1)
     for i, key in enumerate(keyss):
         if key not in buffers:
-            buffers[key] = bytes()
+            buffers[key] = []
         buffers[key].append(rows[i])
     buffers = {k: io.BytesIO(b"".join(v)) for k, v in buffers.items()}
     return buffers
