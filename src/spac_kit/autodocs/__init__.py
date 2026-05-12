@@ -1,3 +1,4 @@
+"""Sphinx extension for automatically generating CCSDS packet documentation."""
 import importlib.metadata
 import os
 import shutil
@@ -13,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def setup(app):
+    """
+    Sphinx extension setup function.
+
+    Registers the spacdocs directive, configuration values, and event handlers.
+    """
     app.add_directive("spacdocs", SpacDocsDirective)
     app.add_config_value("spacdocs_packet_modules", [], "env")
     app.add_css_file("spac-kit.css")
@@ -145,6 +151,7 @@ def generate_packet_stubs(app):
 
 
 def copy_static_css(app, _):
+    """Copy static CSS resources from the extension package to the build directory."""
     # Dynamically set html_static_path if not set
     static_dirs = app.config.html_static_path
     if not static_dirs:
@@ -188,6 +195,13 @@ def copy_static_css(app, _):
 
 
 class SpacDocsDirective(Directive):
+    """
+    Sphinx directive for documenting packet definitions.
+
+    Generates comprehensive documentation for CCSDS packet structures including
+    field summaries and detailed field descriptions.
+    """
+
     required_arguments = 1
     optional_arguments = 0
     has_content = False
