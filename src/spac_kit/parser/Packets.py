@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """CCSDSpy packet specialized for configurable APID parsing."""
 from typing import Callable
 
@@ -19,6 +20,7 @@ class PreParserAPIDPacket(SimpleAPIDPacket):
     depending on one field in this packet.
     """
 
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
     def __init__(
         self,
         fields: list[ccsdspy.PacketField],

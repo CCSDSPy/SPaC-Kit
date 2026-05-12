@@ -1,5 +1,7 @@
 """Utilities shared."""
+import importlib
 import inspect
+import pkgutil
 
 import ccsdspy
 from ccsdspy.constants import BITS_PER_BYTE
@@ -25,16 +27,17 @@ def import_ccsds_packet_packages():
     @return: list of dictionaries with keys: 'packet' (the packet object),
              'variable_name', 'module_path'
     """
-    import importlib
-    import pkgutil
 
     # TODO: use a constant for ccsds.packets
-    import ccsds.packets  # noqa
+    import ccsds.packets  # pylint: disable=import-outside-toplevel,import-error
 
     parsers = []
 
     def is_ccsds_packet(attr):
-        return isinstance(attr, ccsdspy.packet_types._BasePacket)
+        return isinstance(
+            attr,
+            ccsdspy.packet_types._BasePacket,  # pylint: disable=protected-access # noqa: E501
+        )
 
     for _, name, _ in pkgutil.walk_packages(
         ccsds.packets.__path__, ccsds.packets.__name__ + "."
@@ -43,10 +46,8 @@ def import_ccsds_packet_packages():
         members = inspect.getmembers(module, is_ccsds_packet)
         for var_name, member in members:
             if hasattr(member, "apid"):
-                parsers.append({
-                    'packet': member,
-                    'variable_name': var_name,
-                    'module_path': name
-                })
+                parsers.append(
+                    {"packet": member, "variable_name": var_name, "module_path": name}
+                )
 
     return parsers

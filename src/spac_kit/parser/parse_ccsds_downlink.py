@@ -9,7 +9,8 @@ import ccsdspy
 import crccheck
 import numpy as np
 import pandas as pd
-from spac_kit.parser.util import default_pkt, import_ccsds_packet_packages
+from spac_kit.parser.util import default_pkt
+from spac_kit.parser.util import import_ccsds_packet_packages
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         """Initialization."""
 
     @classmethod
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def calculate_crc(
         cls,
         ccsds_version_number,
@@ -76,6 +78,7 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
         )
         return crc.calc(pkt_bytearray)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,arguments-differ # noqa: E501
     def convert(
         self,
         ccsds_version_number_array,
@@ -206,7 +209,13 @@ def get_packet_definitions():
     import_ccsds_packet_packages()
 
     for obj in gc.get_objects():
-        if isinstance(obj, ccsdspy.packet_types._BasePacket) and hasattr(obj, "apid"):
+        if isinstance(
+            obj,
+            ccsdspy.packet_types._BasePacket,  # pylint: disable=protected-access # noqa: E501
+        ) and hasattr(
+            obj, "apid"
+        ):  # pylint: disable=protected-access
+
             if hasattr(obj, "sub_apid"):
                 if obj.apid not in second_round_parsers:
                     second_round_parsers[obj.apid] = {}
@@ -259,6 +268,7 @@ def distribute_packets(keyss, stream1):
     return buffers
 
 
+# pylint: disable=too-many-locals,too-many-nested-blocks
 def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
     """Parse a pure CCSDS binary file (only CCSDS packets)."""
     apid_packets, apid_multi_pkt = get_packet_definitions()

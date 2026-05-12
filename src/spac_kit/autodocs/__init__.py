@@ -1,9 +1,11 @@
+"""Sphinx extension for automatically generating CCSDS packet documentation."""
 import importlib.metadata
 import os
 import shutil
 from collections import defaultdict
 from collections import namedtuple
 
+import pkg_resources
 from ccsdspy.packet_types import _BasePacket
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -13,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def setup(app):
+    """
+    Sphinx extension setup function.
+
+    Registers the spacdocs directive, configuration values, and event handlers.
+    """
     app.add_directive("spacdocs", SpacDocsDirective)
     app.add_config_value("spacdocs_packet_modules", [], "env")
     app.add_css_file("spac-kit.css")
@@ -28,6 +35,7 @@ def setup(app):
 
 
 # --- Stub generation for packets ---
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def generate_packet_stubs(app):
     """
     Scan for all _BasePacket instances in a configured module,
@@ -35,9 +43,11 @@ def generate_packet_stubs(app):
     """
     # --- Configuration ---
     # You may want to make this configurable via conf.py
+    # pylint: disable=invalid-name
     PACKET_MODULES = getattr(app.config, "spacdocs_packet_modules", [])
     STUB_DIR = os.path.join(app.srcdir, "_autopackets")
     TOCTREE_FILE = os.path.join(app.srcdir, "_packet_index.rst")
+    # pylint: enable=invalid-name
 
     logger.info("[spacdocs] generate_packet_stubs running, srcdir=%s", app.srcdir)
     logger.info("[spacdocs] PACKET_MODULES: %s", PACKET_MODULES)
@@ -54,7 +64,7 @@ def generate_packet_stubs(app):
         logger.info("[spacdocs] Importing module: %s", modpath)
         try:
             module = importlib.import_module(modpath)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("[spacdocs] Failed to import %s: %s", modpath, e)
             continue
         found_packet = False
@@ -145,6 +155,7 @@ def generate_packet_stubs(app):
 
 
 def copy_static_css(app, _):
+    """Copy static CSS resources from the extension package to the build directory."""
     # Dynamically set html_static_path if not set
     static_dirs = app.config.html_static_path
     if not static_dirs:
@@ -158,12 +169,10 @@ def copy_static_css(app, _):
 
     # Find the resources directory in the extension package
     try:
-        import pkg_resources
-
         resources_dir = pkg_resources.resource_filename(
             "spac_kit.autodocs", "resources"
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         resources_dir = os.path.join(os.path.dirname(__file__), "resources")
 
     if not os.path.isdir(resources_dir):
@@ -188,6 +197,13 @@ def copy_static_css(app, _):
 
 
 class SpacDocsDirective(Directive):
+    """
+    Sphinx directive for documenting packet definitions.
+
+    Generates comprehensive documentation for CCSDS packet structures including
+    field summaries and detailed field descriptions.
+    """
+
     required_arguments = 1
     optional_arguments = 0
     has_content = False
