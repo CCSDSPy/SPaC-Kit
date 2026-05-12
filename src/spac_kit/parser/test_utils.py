@@ -6,10 +6,12 @@ import pickle
 import pandas as pd
 from spac_kit.parser import parse_ccsds_file
 from spac_kit.parser import strip_non_ccsds_headers
+from spac_kit.parser.downlink_to_excel import export_dfs_to_xlsx
 
 logger = logging.getLogger(__name__)
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def compare(
     local_dir: str,
     is_bdsem: bool,
@@ -43,8 +45,6 @@ def compare(
             f.write(pickle.dumps(dfs))
 
     if create_spreadsheet:
-        from spac_kit.parser.downlink_to_excel import export_dfs_to_xlsx
-
         xlsx_file = os.path.join(local_dir, "out.xlsx")
         export_dfs_to_xlsx(dfs, xlsx_file)
 
