@@ -15,9 +15,9 @@ def format_packet_info(packet_info, long_format=False):
     """
     # Handle new dict format from import_ccsds_packet_packages
     if isinstance(packet_info, dict):
-        parser = packet_info['packet']
-        variable_name = packet_info.get('variable_name')
-        module_path = packet_info.get('module_path')
+        parser = packet_info["packet"]
+        variable_name = packet_info.get("variable_name")
+        module_path = packet_info.get("module_path")
 
         # Build packet identifier using variable name
         if variable_name and module_path:
@@ -68,6 +68,7 @@ def format_packet_info(packet_info, long_format=False):
     return result
 
 
+# pylint: disable=too-many-locals,too-many-branches
 def list_packages(delimiter=None, long_format=False):
     """List all available CCSDS packet packages.
 
@@ -82,21 +83,20 @@ def list_packages(delimiter=None, long_format=False):
 
         if not parsers:
             print("No CCSDS packet packages found.")
-            print("Ensure that packet definitions are available in the "
-                  "ccsds.packets namespace.")
+            print(
+                "Ensure that packet definitions are available in the "
+                "ccsds.packets namespace."
+            )
             return 1
 
         # Collect packet information
         packet_info = [
-            format_packet_info(parser, long_format=long_format)
-            for parser in parsers
+            format_packet_info(parser, long_format=long_format) for parser in parsers
         ]
 
         # Sort by APID
         packet_info.sort(
-            key=lambda x: (
-                x["apid"] if isinstance(x["apid"], int) else float('inf')
-            )
+            key=lambda x: (x["apid"] if isinstance(x["apid"], int) else float("inf"))
         )
 
         if delimiter:
@@ -108,14 +108,13 @@ def list_packages(delimiter=None, long_format=False):
 
             for info in packet_info:
                 row = [
-                    str(info["apid"]), info["packet"],
-                    info["name"], info["description"]
+                    str(info["apid"]),
+                    info["packet"],
+                    info["name"],
+                    info["description"],
                 ]
                 if long_format:
-                    row.extend([
-                        info["type"], str(info["fields"]),
-                        info["field_names"]
-                    ])
+                    row.extend([info["type"], str(info["fields"]), info["field_names"]])
                 print(delimiter.join(row))
         else:
             # Table format output
@@ -184,12 +183,13 @@ def list_packages(delimiter=None, long_format=False):
         return 0
 
     except ImportError as e:
-        print(f"Error: Unable to import ccsds.packets namespace: {e}",
-              file=sys.stderr)
-        print("Ensure that packet definitions are installed and available.",
-              file=sys.stderr)
+        print(f"Error: Unable to import ccsds.packets namespace: {e}", file=sys.stderr)
+        print(
+            "Ensure that packet definitions are installed and available.",
+            file=sys.stderr,
+        )
         return 1
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
@@ -207,24 +207,24 @@ Examples:
   spac-ls -l -d ","      Output as CSV with additional fields
   spac-ls -d $'\\t'      Output as TSV (tab-separated) format
   spac-ls -d "," > out.csv  Save CSV output to file
-        """
+        """,
     )
     parser.add_argument(
-        "-l", "--long",
+        "-l",
+        "--long",
         action="store_true",
         help="Display additional fields including packet type, field count, "
-             "and field names"
+        "and field names",
     )
     parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="Reserved for future use"
+        "-v", "--verbose", action="store_true", help="Reserved for future use"
     )
     parser.add_argument(
-        "-d", "--delimiter",
+        "-d",
+        "--delimiter",
         type=str,
         help="Output as delimited format with specified delimiter "
-             "(e.g., ',' for CSV, '\\t' for TSV)"
+        "(e.g., ',' for CSV, '\\t' for TSV)",
     )
     return parser
 

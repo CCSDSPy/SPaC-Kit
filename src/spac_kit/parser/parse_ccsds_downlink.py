@@ -2,20 +2,15 @@
 from __future__ import annotations
 
 import gc
-<<<<<<< HEAD
-=======
-import importlib
-import inspect
->>>>>>> 3d8a286 (Linting fixes)
 import io
 import logging
-import pkgutil
 
 import ccsdspy
 import crccheck
 import numpy as np
 import pandas as pd
-from spac_kit.parser.util import default_pkt, import_ccsds_packet_packages
+from spac_kit.parser.util import default_pkt
+from spac_kit.parser.util import import_ccsds_packet_packages
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +209,9 @@ def get_packet_definitions():
     import_ccsds_packet_packages()
 
     for obj in gc.get_objects():
-        if isinstance(obj, ccsdspy.packet_types._BasePacket) and hasattr(
+        if isinstance(
+            obj, ccsdspy.packet_types._BasePacket
+        ) and hasattr(  # pylint: disable=protected-access # noqa: E501
             obj, "apid"
         ):  # pylint: disable=protected-access
 
