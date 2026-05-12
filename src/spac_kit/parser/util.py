@@ -35,8 +35,9 @@ def import_ccsds_packet_packages():
 
     def is_ccsds_packet(attr):
         return isinstance(
-            attr, ccsdspy.packet_types._BasePacket
-        )  # pylint: disable=protected-access # noqa: E501
+            attr,
+            ccsdspy.packet_types._BasePacket,  # pylint: disable=protected-access # noqa: E501
+        )
 
     for _, name, _ in pkgutil.walk_packages(
         ccsds.packets.__path__, ccsds.packets.__name__ + "."

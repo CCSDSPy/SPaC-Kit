@@ -210,8 +210,9 @@ def get_packet_definitions():
 
     for obj in gc.get_objects():
         if isinstance(
-            obj, ccsdspy.packet_types._BasePacket
-        ) and hasattr(  # pylint: disable=protected-access # noqa: E501
+            obj,
+            ccsdspy.packet_types._BasePacket,  # pylint: disable=protected-access # noqa: E501
+        ) and hasattr(
             obj, "apid"
         ):  # pylint: disable=protected-access
 
