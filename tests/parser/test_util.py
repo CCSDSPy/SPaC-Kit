@@ -1,12 +1,14 @@
 """Unit tests for utility functions."""
 import io
 import struct
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-import pytest
 import ccsdspy
+import pytest
 from ccsdspy.constants import BITS_PER_BYTE
-from spac_kit.parser.util import default_pkt, import_ccsds_packet_packages
+from spac_kit.parser.util import default_pkt
+from spac_kit.parser.util import import_ccsds_packet_packages
 
 
 class TestDefaultPkt:
@@ -119,11 +121,16 @@ class TestImportCcsdsPacketPackages:
         mock_ccsds.packets = mock_ccsds_packets
 
         with patch("pkgutil.walk_packages", return_value=[]):
-            with patch.dict("sys.modules", {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets}):
+            with patch.dict(
+                "sys.modules",
+                {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets},
+            ):
                 parsers = import_ccsds_packet_packages()
                 assert parsers == []
 
-    @pytest.mark.skip(reason="Complex mocking scenario - covered by integration tests in test_spac_ls")
+    @pytest.mark.skip(
+        reason="Complex mocking scenario - covered by integration tests in test_spac_ls"
+    )
     def test_import_with_valid_packets(self):
         """Test import_ccsds_packet_packages with valid packet definitions."""
         # This test is skipped because mocking isinstance checks within inspect.getmembers
@@ -131,7 +138,9 @@ class TestImportCcsdsPacketPackages:
         # in test_spac_ls.py
         pass
 
-    @pytest.mark.skip(reason="Complex mocking scenario - covered by integration tests in test_spac_ls")
+    @pytest.mark.skip(
+        reason="Complex mocking scenario - covered by integration tests in test_spac_ls"
+    )
     def test_import_filters_packets_without_apid(self):
         """Test that packets without apid attribute are filtered out."""
         # This test is skipped because mocking isinstance checks within inspect.getmembers
@@ -147,8 +156,15 @@ class TestImportCcsdsPacketPackages:
         mock_ccsds_packets.__name__ = "ccsds.packets"
         mock_ccsds.packets = mock_ccsds_packets
 
-        with patch.dict("sys.modules", {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets}):
-            with patch("pkgutil.walk_packages", return_value=[("", "ccsds.packets.bad", False)]):
-                with patch("importlib.import_module", side_effect=ImportError("Module not found")):
+        with patch.dict(
+            "sys.modules", {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets}
+        ):
+            with patch(
+                "pkgutil.walk_packages", return_value=[("", "ccsds.packets.bad", False)]
+            ):
+                with patch(
+                    "importlib.import_module",
+                    side_effect=ImportError("Module not found"),
+                ):
                     with pytest.raises(ImportError):
                         import_ccsds_packet_packages()
