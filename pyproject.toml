@@ -64,6 +64,7 @@ dev = [
 [project.scripts]
 spac-parse = "spac_kit.parser.downlink_to_excel:main"
 spac-ls = "spac_kit.parser.spac_ls:main"
+spac-generate = "spac_kit.generator.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
