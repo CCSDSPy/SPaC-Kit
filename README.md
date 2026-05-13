@@ -7,8 +7,8 @@
 **SpaC-Kit** is a collection of Python tools for working with **CCSDS Space Packets**. It can generically:
 
 - Parses data files into **Pandas DataFrames** or **Excel spreadsheets**
+- Generates CCSDS packets with zero/blank-initialized fields for testing
 - **(Scheduled Feb 2026)** – Generates documentation in multiple formats (**HTML**, **Markdown**, **reStructuredText**, **PDF**)
-- **(Scheduled Apr 2026)** – Generates simulated packets
 
 SpaC-Kit supports mission or instrument-specific CCSDS packet structures via **plugin** packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
 
@@ -31,16 +31,16 @@ Tested with `python 3.12`.
 
 Optionally, but recommended, create a virtual environment:
 
-    python3 -m venv my_virtual_env
-    source my_virtual_env/bin/activate
+    python3 -m venv .venv
+    source .venv/bin/activate
 
 
 ### Install
 
 Install your plugin library first, for example Europa-Clipper CCSDS packets definitions:
 
-    git clone https://github.com/joshgarde/europa-cliper-ccsds-plugin.git
-    cd europa-cliper-ccsds-plugin
+    git clone https://github.com/nasa-jpl/spac-kit-europa-clipper.git
+    cd spac-kit-europa-clipper
     pip install .
 
 Install the SPaC-Kit package:
@@ -49,11 +49,56 @@ Install the SPaC-Kit package:
 
 ### Use
 
+#### Parse CCSDS packets
+
     spac-parse --file {your ccsds file}
 
 See more options with:
 
     spac-parse --help
+
+#### Generate CCSDS packets
+
+Generate packets for all installed packet definitions:
+
+    spac-generate --output packets.bin
+
+Generate packets for specific APID(s):
+
+    spac-generate --output packets.bin --apid 100 200
+
+Generate multiple packets per APID:
+
+    spac-generate --output packets.bin --count 10
+
+List available packet definitions:
+
+    spac-ls
+
+See more options with:
+
+    spac-generate --help
+
+#### Programmatic usage
+
+The packet generator creates valid CCSDS packets with all fields initialized to zero/blank values, useful for testing packet parsing pipelines.
+
+```python
+import ccsdspy
+from spac_kit.generator import PacketGenerator
+
+# Define packet structure
+fields = [
+    ccsdspy.PacketField(name="status", data_type="uint", bit_length=8),
+    ccsdspy.PacketField(name="temperature", data_type="float", bit_length=32),
+]
+packet_def = ccsdspy.VariableLength(fields, apid=100, name="SensorPacket")
+
+# Generate packets
+generator = PacketGenerator(packet_def)
+with open("packets.bin", "wb") as f:
+    generator.write_packet(f, count=5)  # Generate 5 packets
+```
 
 
 ## Developers
@@ -64,13 +109,7 @@ See more options with:
 
 #### Create a virtual environment
 
-For example in command line:
-
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -e '.[dev]'
-
-Alternatively, with `poetry`:
+SPaC-Kit handles development primarily via Poetry. To setup the repo, run:
 
     poetry env use python3.12
     poetry install --with dev
@@ -91,15 +130,11 @@ Install the package
 
 Run an example:
 
-    python src/spa_kit/parse/downlink_to_excel.py
+    python src/spac_kit/parser/downlink_to_excel.py
 
 or
 
     spac-parse --help
-
-or
-
-    spac-parse --file ./data/ecm_mag_testcase6_cmds_split_out.log --bdsem --header
 
 With poetry, update the `poetry.lock` before commiting and pushing to the github repository:
 
@@ -114,8 +149,6 @@ Create a tag in the repository and push the changes.
 
     git tag vX.Y.Z
     git push origin main --tags
-
-TO BE DONE: the CI automation is going to mke the release on PyPI
 
 Locally, you can do the following steps to build and publish the package.
 
