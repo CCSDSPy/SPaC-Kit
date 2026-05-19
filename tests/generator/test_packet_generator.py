@@ -1,5 +1,6 @@
 """Unit tests for packet generator."""
 import io
+from pathlib import Path
 
 import ccsdspy
 import numpy as np
@@ -58,7 +59,7 @@ class TestPacketGenerator:
         assert default.shape == (3, 4)
         assert np.all(default == 0)
 
-    def test_write_single_packet(self):
+    def test_write_single_packet(self, test_output_dir):
         """Test writing a single packet to file."""
         fields = [
             ccsdspy.PacketField(name="field1", data_type="uint", bit_length=8),
@@ -73,6 +74,11 @@ class TestPacketGenerator:
         file_obj.seek(0)
         written_data = file_obj.read()
 
+        # Save to output directory for review
+        output_file = test_output_dir / "single_packet_zeros.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
         # Verify packet was written (6-byte header + 3 bytes data)
         assert len(written_data) == 6 + 3
 
@@ -86,7 +92,7 @@ class TestPacketGenerator:
         assert parsed["CCSDS_APID"][0] == 100
         assert parsed["CCSDS_SEQUENCE_COUNT"][0] == 0
 
-    def test_write_multiple_packets(self):
+    def test_write_multiple_packets(self, test_output_dir):
         """Test writing multiple packets with incrementing sequence counts."""
         fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
         packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
@@ -97,6 +103,11 @@ class TestPacketGenerator:
 
         file_obj.seek(0)
         written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "multiple_packets_zeros.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
 
         packet_size = 6 + 1
         assert len(written_data) == packet_size * 3
@@ -113,7 +124,7 @@ class TestPacketGenerator:
         # Verify APID
         assert np.all(parsed["CCSDS_APID"] == 100)
 
-    def test_write_packet_with_array_fields(self):
+    def test_write_packet_with_array_fields(self, test_output_dir):
         """Test writing packets with array fields."""
         fields = [
             ccsdspy.PacketField(name="header", data_type="uint", bit_length=8),
@@ -127,6 +138,14 @@ class TestPacketGenerator:
 
         file_obj = io.BytesIO()
         generator.write_packet(file_obj, count=2, use_random=False)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "array_fields_zeros.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
 
         # Verify by parsing back with ccsdspy
         file_obj.seek(0)
@@ -142,7 +161,7 @@ class TestPacketGenerator:
         # Verify array shape
         assert parsed["array_data"][0].shape == (5,)
 
-    def test_write_packet_with_float_fields(self):
+    def test_write_packet_with_float_fields(self, test_output_dir):
         """Test writing packets with float fields."""
         fields = [
             ccsdspy.PacketField(name="temperature", data_type="float", bit_length=32),
@@ -153,6 +172,14 @@ class TestPacketGenerator:
 
         file_obj = io.BytesIO()
         generator.write_packet(file_obj, count=2, use_random=False)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "float_fields_zeros.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
 
         # Verify by parsing back with ccsdspy
         file_obj.seek(0)
@@ -315,7 +342,7 @@ class TestPacketGenerator:
         # (extremely unlikely with random data)
         assert not np.all(data_dict["data"] == data_dict["data"][0])
 
-    def test_write_packet_random(self):
+    def test_write_packet_random(self, test_output_dir):
         """Test writing packets with random data."""
         fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
         packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
@@ -323,6 +350,14 @@ class TestPacketGenerator:
 
         file_obj = io.BytesIO()
         generator.write_packet(file_obj, count=3, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "multiple_packets_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
 
         # Verify by parsing back with ccsdspy
         file_obj.seek(0)

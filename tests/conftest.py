@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures."""
 import io
 import struct
+from pathlib import Path
 
 import pytest
 
@@ -87,3 +88,18 @@ def sample_json_header_file(sample_ccsds_packet):
     json_header = b'{"mission": "test", "date": "2024-01-01"}\n'
 
     return io.BytesIO(json_header + sample_ccsds_packet)
+
+
+@pytest.fixture
+def test_output_dir():
+    """Create and return a directory for test output files.
+
+    Creates tests/generator/output/ directory for saving generated packets.
+    The directory persists after tests for manual review.
+
+    Returns:
+        Path object pointing to the output directory
+    """
+    output_dir = Path(__file__).parent / "generator" / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
