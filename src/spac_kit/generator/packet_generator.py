@@ -100,9 +100,31 @@ class PacketGenerator:
 
         Returns:
             Random unsigned integer array
+
+        Note:
+            Generates with a larger dtype when needed to avoid overflow in the
+            exclusive high bound, then casts to target dtype.
         """
         max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
-        return np.random.randint(0, max_val, size=size, dtype=dtype)
+
+        # Generate with larger dtype to handle exclusive high bound
+        if dtype == np.uint8:
+            temp = np.random.randint(0, max_val, size=size, dtype=np.uint16)
+            return temp.astype(np.uint8)
+        elif dtype == np.uint16:
+            temp = np.random.randint(0, max_val, size=size, dtype=np.uint32)
+            return temp.astype(np.uint16)
+        elif dtype == np.uint32:
+            temp = np.random.randint(0, max_val, size=size, dtype=np.uint64)
+            return temp.astype(np.uint32)
+        else:
+            # uint64 - use int64 for generation if possible
+            if max_val <= np.iinfo(np.int64).max:
+                temp = np.random.randint(0, max_val, size=size, dtype=np.int64)
+                return temp.astype(np.uint64)
+            else:
+                # For very large uint64, accept the limitation
+                return np.random.randint(0, max_val, size=size, dtype=np.uint64)
 
     def _generate_random_int(self, bit_length: int, dtype, size):
         """Generate random signed integer array respecting bit length.
@@ -114,10 +136,27 @@ class PacketGenerator:
 
         Returns:
             Random signed integer array
+
+        Note:
+            Generates with a larger dtype when needed to avoid overflow in the
+            exclusive high bound, then casts to target dtype.
         """
         min_val = max(-(2 ** (bit_length - 1)), np.iinfo(dtype).min)
         max_val = min(2 ** (bit_length - 1), np.iinfo(dtype).max + 1)
-        return np.random.randint(min_val, max_val, size=size, dtype=dtype)
+
+        # Generate with larger dtype to handle exclusive high bound
+        if dtype == np.int8:
+            temp = np.random.randint(min_val, max_val, size=size, dtype=np.int16)
+            return temp.astype(np.int8)
+        elif dtype == np.int16:
+            temp = np.random.randint(min_val, max_val, size=size, dtype=np.int32)
+            return temp.astype(np.int16)
+        elif dtype == np.int32:
+            temp = np.random.randint(min_val, max_val, size=size, dtype=np.int64)
+            return temp.astype(np.int32)
+        else:
+            # int64 - accept the limitation at the boundary
+            return np.random.randint(min_val, max_val, size=size, dtype=np.int64)
 
     def _generate_random_float(self, dtype, size):
         """Generate random float array.
