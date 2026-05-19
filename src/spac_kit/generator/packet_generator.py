@@ -68,6 +68,68 @@ class PacketGenerator:
         }
         return type_map.get(data_type, np.uint8)
 
+    def _generate_random_uint(self, bit_length: int, dtype, size):
+        """Generate random unsigned integer array respecting bit length.
+
+        Args:
+            bit_length: Number of bits in the field
+            dtype: Numpy dtype for the array
+            size: Shape of the output array
+
+        Returns:
+            Random unsigned integer array
+        """
+        max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
+        return np.random.randint(0, max_val, size=size, dtype=dtype)
+
+    def _generate_random_int(self, bit_length: int, dtype, size):
+        """Generate random signed integer array respecting bit length.
+
+        Args:
+            bit_length: Number of bits in the field
+            dtype: Numpy dtype for the array
+            size: Shape of the output array
+
+        Returns:
+            Random signed integer array
+        """
+        min_val = max(-(2 ** (bit_length - 1)), np.iinfo(dtype).min)
+        max_val = min(2 ** (bit_length - 1), np.iinfo(dtype).max + 1)
+        return np.random.randint(min_val, max_val, size=size, dtype=dtype)
+
+    def _generate_random_float(self, dtype, size):
+        """Generate random float array.
+
+        Args:
+            dtype: Numpy dtype for the array
+            size: Shape of the output array
+
+        Returns:
+            Random float array
+        """
+        return np.random.uniform(-1000.0, 1000.0, size=size).astype(dtype)
+
+    def _generate_random_data(self, data_type: str, bit_length: int, dtype, size):
+        """Generate random data based on data type.
+
+        Args:
+            data_type: CCSDSpy data type (uint, int, float, double)
+            bit_length: Number of bits in the field
+            dtype: Numpy dtype for the array
+            size: Shape of the output array
+
+        Returns:
+            Random data array appropriate for the data type
+        """
+        if data_type == "uint":
+            return self._generate_random_uint(bit_length, dtype, size)
+        elif data_type == "int":
+            return self._generate_random_int(bit_length, dtype, size)
+        elif data_type in ("float", "double"):
+            return self._generate_random_float(dtype, size)
+        else:
+            return np.zeros(size, dtype=dtype)
+
     def _create_data_dict(self, count: int, use_random: bool = True) -> dict:
         """Create a dictionary of arrays for packet generation.
 
@@ -88,102 +150,111 @@ class PacketGenerator:
             array_shape = getattr(field, "_array_shape", None)
             dtype = self._get_numpy_dtype(data_type)
 
-            # Handle variable-length fields (expand)
+            # Case 1: Variable-length fields (expand)
             if array_shape == "expand":
-                if use_random:
-                    # Create list of random-length arrays with random data
-                    data_dict[field_name] = []
-                    for _ in range(count):
-                        length = np.random.randint(0, 11)  # Random length 0-10
-                        if data_type in ("uint", "int"):
-                            if data_type == "uint":
-                                max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
-                                arr = np.random.randint(
-                                    0, max_val, size=length, dtype=dtype
-                                )
-                            else:
-                                min_val = max(
-                                    -(2 ** (bit_length - 1)), np.iinfo(dtype).min
-                                )
-                                max_val = min(
-                                    2 ** (bit_length - 1), np.iinfo(dtype).max + 1
-                                )
-                                arr = np.random.randint(
-                                    min_val, max_val, size=length, dtype=dtype
-                                )
-                        elif data_type in ("float", "double"):
-                            arr = np.random.uniform(
-                                -1000.0, 1000.0, size=length
-                            ).astype(dtype)
-                        else:
-                            arr = np.array([], dtype=dtype)
-                        data_dict[field_name].append(arr)
-                else:
-                    # Create list of empty arrays
-                    data_dict[field_name] = [
-                        np.array([], dtype=dtype) for _ in range(count)
-                    ]
+                data_dict[field_name] = self._create_variable_length_data(
+                    count, data_type, bit_length, dtype, use_random
+                )
 
-            # Handle fixed-size array fields
+            # Case 2: Fixed-size array fields
             elif array_shape is not None:
-                if isinstance(array_shape, (tuple, list)):
-                    # Multi-dimensional array: shape is (count, *array_shape)
-                    full_shape = (count,) + tuple(array_shape)
-                else:
-                    # 1D array: shape is (count, array_shape)
-                    full_shape = (count, array_shape)
+                full_shape = self._compute_array_shape(count, array_shape)
+                data_dict[field_name] = self._create_array_data(
+                    data_type, bit_length, dtype, full_shape, use_random
+                )
 
-                if use_random:
-                    if data_type in ("uint", "int"):
-                        if data_type == "uint":
-                            max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
-                            data_dict[field_name] = np.random.randint(
-                                0, max_val, size=full_shape, dtype=dtype
-                            )
-                        else:
-                            min_val = max(-(2 ** (bit_length - 1)), np.iinfo(dtype).min)
-                            max_val = min(
-                                2 ** (bit_length - 1), np.iinfo(dtype).max + 1
-                            )
-                            data_dict[field_name] = np.random.randint(
-                                min_val, max_val, size=full_shape, dtype=dtype
-                            )
-                    elif data_type in ("float", "double"):
-                        data_dict[field_name] = np.random.uniform(
-                            -1000.0, 1000.0, size=full_shape
-                        ).astype(dtype)
-                    else:
-                        data_dict[field_name] = np.zeros(full_shape, dtype=dtype)
-                else:
-                    data_dict[field_name] = np.zeros(full_shape, dtype=dtype)
-
-            # Handle regular scalar fields
+            # Case 3: Scalar fields
             else:
-                if use_random:
-                    if data_type in ("uint", "int"):
-                        if data_type == "uint":
-                            max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
-                            data_dict[field_name] = np.random.randint(
-                                0, max_val, size=count, dtype=dtype
-                            )
-                        else:
-                            min_val = max(-(2 ** (bit_length - 1)), np.iinfo(dtype).min)
-                            max_val = min(
-                                2 ** (bit_length - 1), np.iinfo(dtype).max + 1
-                            )
-                            data_dict[field_name] = np.random.randint(
-                                min_val, max_val, size=count, dtype=dtype
-                            )
-                    elif data_type in ("float", "double"):
-                        data_dict[field_name] = np.random.uniform(
-                            -1000.0, 1000.0, size=count
-                        ).astype(dtype)
-                    else:
-                        data_dict[field_name] = np.zeros(count, dtype=dtype)
-                else:
-                    data_dict[field_name] = np.zeros(count, dtype=dtype)
+                data_dict[field_name] = self._create_scalar_data(
+                    count, data_type, bit_length, dtype, use_random
+                )
 
         return data_dict
+
+    def _compute_array_shape(self, count: int, array_shape):
+        """Compute the full shape for a fixed-size array field.
+
+        Args:
+            count: Number of packets
+            array_shape: Array shape from field definition
+
+        Returns:
+            Full shape tuple (count, *array_shape)
+        """
+        if isinstance(array_shape, (tuple, list)):
+            return (count,) + tuple(array_shape)
+        else:
+            return (count, array_shape)
+
+    def _create_variable_length_data(
+        self, count: int, data_type: str, bit_length: int, dtype, use_random: bool
+    ):
+        """Create variable-length array data for expand fields.
+
+        Args:
+            count: Number of packets
+            data_type: CCSDSpy data type
+            bit_length: Number of bits in the field
+            dtype: Numpy dtype
+            use_random: If True, generate random data
+
+        Returns:
+            List of numpy arrays with varying lengths
+        """
+        if not use_random:
+            return [np.array([], dtype=dtype) for _ in range(count)]
+
+        result = []
+        for _ in range(count):
+            length = np.random.randint(0, 11)  # Random length 0-10
+            arr = self._generate_random_data(data_type, bit_length, dtype, length)
+            result.append(arr)
+        return result
+
+    def _create_array_data(
+        self,
+        data_type: str,
+        bit_length: int,
+        dtype,
+        shape: tuple,
+        use_random: bool,
+    ):
+        """Create fixed-size array data.
+
+        Args:
+            data_type: CCSDSpy data type
+            bit_length: Number of bits in the field
+            dtype: Numpy dtype
+            shape: Full shape of the array
+            use_random: If True, generate random data
+
+        Returns:
+            Numpy array with the specified shape
+        """
+        if not use_random:
+            return np.zeros(shape, dtype=dtype)
+
+        return self._generate_random_data(data_type, bit_length, dtype, shape)
+
+    def _create_scalar_data(
+        self, count: int, data_type: str, bit_length: int, dtype, use_random: bool
+    ):
+        """Create scalar field data.
+
+        Args:
+            count: Number of packets
+            data_type: CCSDSpy data type
+            bit_length: Number of bits in the field
+            dtype: Numpy dtype
+            use_random: If True, generate random data
+
+        Returns:
+            Numpy array of scalar values
+        """
+        if not use_random:
+            return np.zeros(count, dtype=dtype)
+
+        return self._generate_random_data(data_type, bit_length, dtype, count)
 
     def write_packet(self, file_obj: BinaryIO, count: int = 1, use_random: bool = True):
         """Write one or more packets to a file using ccsdspy's encoder.
