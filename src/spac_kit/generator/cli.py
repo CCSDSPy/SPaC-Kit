@@ -33,6 +33,15 @@ def main():
         default=1,
         help="Number of packets to generate per APID (default: 1)",
     )
+    parser.add_argument(
+        "-z",
+        "--zeros",
+        action="store_true",
+        help=(
+            "Generate packets with zero-initialized data instead of random data "
+            "(default: random)"
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -69,11 +78,13 @@ def main():
             )
             sys.exit(1)
 
+    use_random = not args.zeros  # Default True (random), False if --zeros flag
+
     print(f"Generating packets to: {args.output}")
     with open(args.output, "wb") as f:
         for pkt_info in selected_packets:
             generator = PacketGenerator(pkt_info["packet"])
-            generator.write_packet(f, count=args.count)
+            generator.write_packet(f, count=args.count, use_random=use_random)
             print(
                 f"  Generated {args.count} packet(s) for APID {generator.apid} "
                 f"({generator.name})"

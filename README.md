@@ -59,9 +59,13 @@ See more options with:
 
 #### Generate CCSDS packets
 
-Generate packets for all installed packet definitions:
+Generate packets with random data for all installed packet definitions:
 
     spac-generate --output packets.bin
+
+Generate packets with zero-initialized data:
+
+    spac-generate --output packets.bin --zeros
 
 Generate packets for specific APID(s):
 
@@ -81,7 +85,7 @@ See more options with:
 
 #### Programmatic usage
 
-The packet generator creates valid CCSDS packets with all fields initialized to zero/blank values, useful for testing packet parsing pipelines.
+The packet generator creates valid CCSDS packets, useful for testing packet parsing pipelines.
 
 ```python
 import ccsdspy
@@ -94,10 +98,14 @@ fields = [
 ]
 packet_def = ccsdspy.VariableLength(fields, apid=100, name="SensorPacket")
 
-# Generate packets
+# Generate packets with random data (default)
 generator = PacketGenerator(packet_def)
 with open("packets.bin", "wb") as f:
     generator.write_packet(f, count=5)  # Generate 5 packets
+
+# Generate packets with zero-initialized data
+with open("zeros.bin", "wb") as f:
+    generator.write_packet(f, count=5, use_random=False)
 ```
 
 

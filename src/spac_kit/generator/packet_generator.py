@@ -68,29 +68,62 @@ class PacketGenerator:
         }
         return type_map.get(data_type, np.uint8)
 
-    def _create_zero_data_dict(self, count: int) -> dict:
-        """Create a dictionary of zero-initialized arrays for packet generation.
+    def _create_data_dict(self, count: int, use_random: bool = True) -> dict:
+        """Create a dictionary of arrays for packet generation.
 
         Args:
             count: Number of packets to generate
+            use_random: If True, generate random data; if False, use zeros
+                (default: True)
 
         Returns:
-            Dictionary mapping field names to numpy arrays of zeros
+            Dictionary mapping field names to numpy arrays
         """
         data_dict = {}
 
         for field in self.packet._fields:
             field_name = field._name
             data_type = field._data_type
+            bit_length = field._bit_length
             array_shape = getattr(field, "_array_shape", None)
             dtype = self._get_numpy_dtype(data_type)
 
             # Handle variable-length fields (expand)
             if array_shape == "expand":
-                # Create list of empty arrays, one per packet
-                data_dict[field_name] = [
-                    np.array([], dtype=dtype) for _ in range(count)
-                ]
+                if use_random:
+                    # Create list of random-length arrays with random data
+                    data_dict[field_name] = []
+                    for _ in range(count):
+                        length = np.random.randint(0, 11)  # Random length 0-10
+                        if data_type in ("uint", "int"):
+                            if data_type == "uint":
+                                max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
+                                arr = np.random.randint(
+                                    0, max_val, size=length, dtype=dtype
+                                )
+                            else:
+                                min_val = max(
+                                    -(2 ** (bit_length - 1)), np.iinfo(dtype).min
+                                )
+                                max_val = min(
+                                    2 ** (bit_length - 1), np.iinfo(dtype).max + 1
+                                )
+                                arr = np.random.randint(
+                                    min_val, max_val, size=length, dtype=dtype
+                                )
+                        elif data_type in ("float", "double"):
+                            arr = np.random.uniform(
+                                -1000.0, 1000.0, size=length
+                            ).astype(dtype)
+                        else:
+                            arr = np.array([], dtype=dtype)
+                        data_dict[field_name].append(arr)
+                else:
+                    # Create list of empty arrays
+                    data_dict[field_name] = [
+                        np.array([], dtype=dtype) for _ in range(count)
+                    ]
+
             # Handle fixed-size array fields
             elif array_shape is not None:
                 if isinstance(array_shape, (tuple, list)):
@@ -99,25 +132,73 @@ class PacketGenerator:
                 else:
                     # 1D array: shape is (count, array_shape)
                     full_shape = (count, array_shape)
-                data_dict[field_name] = np.zeros(full_shape, dtype=dtype)
+
+                if use_random:
+                    if data_type in ("uint", "int"):
+                        if data_type == "uint":
+                            max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
+                            data_dict[field_name] = np.random.randint(
+                                0, max_val, size=full_shape, dtype=dtype
+                            )
+                        else:
+                            min_val = max(-(2 ** (bit_length - 1)), np.iinfo(dtype).min)
+                            max_val = min(
+                                2 ** (bit_length - 1), np.iinfo(dtype).max + 1
+                            )
+                            data_dict[field_name] = np.random.randint(
+                                min_val, max_val, size=full_shape, dtype=dtype
+                            )
+                    elif data_type in ("float", "double"):
+                        data_dict[field_name] = np.random.uniform(
+                            -1000.0, 1000.0, size=full_shape
+                        ).astype(dtype)
+                    else:
+                        data_dict[field_name] = np.zeros(full_shape, dtype=dtype)
+                else:
+                    data_dict[field_name] = np.zeros(full_shape, dtype=dtype)
+
             # Handle regular scalar fields
             else:
-                data_dict[field_name] = np.zeros(count, dtype=dtype)
+                if use_random:
+                    if data_type in ("uint", "int"):
+                        if data_type == "uint":
+                            max_val = min(2**bit_length, np.iinfo(dtype).max + 1)
+                            data_dict[field_name] = np.random.randint(
+                                0, max_val, size=count, dtype=dtype
+                            )
+                        else:
+                            min_val = max(-(2 ** (bit_length - 1)), np.iinfo(dtype).min)
+                            max_val = min(
+                                2 ** (bit_length - 1), np.iinfo(dtype).max + 1
+                            )
+                            data_dict[field_name] = np.random.randint(
+                                min_val, max_val, size=count, dtype=dtype
+                            )
+                    elif data_type in ("float", "double"):
+                        data_dict[field_name] = np.random.uniform(
+                            -1000.0, 1000.0, size=count
+                        ).astype(dtype)
+                    else:
+                        data_dict[field_name] = np.zeros(count, dtype=dtype)
+                else:
+                    data_dict[field_name] = np.zeros(count, dtype=dtype)
 
         return data_dict
 
-    def write_packet(self, file_obj: BinaryIO, count: int = 1):
+    def write_packet(self, file_obj: BinaryIO, count: int = 1, use_random: bool = True):
         """Write one or more packets to a file using ccsdspy's encoder.
 
         Args:
             file_obj: Binary file object to write to
             count: Number of packets to write (default: 1)
+            use_random: If True, generate random data; if False, use zeros
+                (default: True)
 
         Note:
             Sequence count starts from 0 and increments automatically.
         """
-        # Create zero-initialized data dictionary
-        data = self._create_zero_data_dict(count)
+        # Create data dictionary (random or zeros)
+        data = self._create_data_dict(count, use_random=use_random)
 
         # Handle empty packets (no fields)
         # ccsdspy expects at least 1 byte of data (packet_nbytes = data_length + 7)

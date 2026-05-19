@@ -157,3 +157,30 @@ class TestCLI:
 
         captured = capsys.readouterr()
         assert "No CCSDS packet definitions found" in captured.err
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_generate_with_zeros_flag(self, mock_open, mock_import, capsys):
+        """Test generating packets with --zeros flag."""
+        mock_packet = MagicMock()
+        mock_packet.apid = 100
+        mock_packet.name = "TestPacket"
+        mock_packet._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet,
+                "variable_name": "test1",
+                "module_path": "test.module",
+            }
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(sys, "argv", ["cli", "--output", "test.bin", "--zeros"]):
+            main()
+
+        captured = capsys.readouterr()
+        assert "Success!" in captured.out
+        assert "test.bin" in captured.out

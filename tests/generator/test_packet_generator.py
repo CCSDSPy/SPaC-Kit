@@ -68,7 +68,7 @@ class TestPacketGenerator:
         generator = PacketGenerator(packet)
 
         file_obj = io.BytesIO()
-        generator.write_packet(file_obj)
+        generator.write_packet(file_obj, use_random=False)
 
         file_obj.seek(0)
         written_data = file_obj.read()
@@ -93,7 +93,7 @@ class TestPacketGenerator:
         generator = PacketGenerator(packet)
 
         file_obj = io.BytesIO()
-        generator.write_packet(file_obj, count=3)
+        generator.write_packet(file_obj, count=3, use_random=False)
 
         file_obj.seek(0)
         written_data = file_obj.read()
@@ -126,7 +126,7 @@ class TestPacketGenerator:
         generator = PacketGenerator(packet)
 
         file_obj = io.BytesIO()
-        generator.write_packet(file_obj, count=2)
+        generator.write_packet(file_obj, count=2, use_random=False)
 
         # Verify by parsing back with ccsdspy
         file_obj.seek(0)
@@ -152,7 +152,7 @@ class TestPacketGenerator:
         generator = PacketGenerator(packet)
 
         file_obj = io.BytesIO()
-        generator.write_packet(file_obj, count=2)
+        generator.write_packet(file_obj, count=2, use_random=False)
 
         # Verify by parsing back with ccsdspy
         file_obj.seek(0)
@@ -172,7 +172,7 @@ class TestPacketGenerator:
             generator = PacketGenerator(packet)
 
             file_obj = io.BytesIO()
-            generator.write_packet(file_obj)
+            generator.write_packet(file_obj, use_random=False)
 
             # Verify by parsing back with ccsdspy
             file_obj.seek(0)
@@ -187,7 +187,7 @@ class TestPacketGenerator:
         generator = PacketGenerator(packet)
 
         file_obj = io.BytesIO()
-        generator.write_packet(file_obj)
+        generator.write_packet(file_obj, use_random=False)
 
         file_obj.seek(0)
         written_data = file_obj.read()
@@ -202,8 +202,8 @@ class TestPacketGenerator:
         assert len(parsed["CCSDS_APID"]) == 1
         assert parsed["CCSDS_APID"][0] == 100
 
-    def test_create_zero_data_dict(self):
-        """Test zero data dictionary creation."""
+    def test_create_data_dict_zeros(self):
+        """Test zero-initialized data dictionary creation."""
         fields = [
             ccsdspy.PacketField(name="scalar", data_type="uint", bit_length=8),
             ccsdspy.PacketArray(
@@ -213,7 +213,7 @@ class TestPacketGenerator:
         packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
         generator = PacketGenerator(packet)
 
-        data_dict = generator._create_zero_data_dict(count=2)
+        data_dict = generator._create_data_dict(count=2, use_random=False)
 
         # Check scalar field
         assert "scalar" in data_dict
@@ -224,3 +224,111 @@ class TestPacketGenerator:
         assert "fixed_array" in data_dict
         assert data_dict["fixed_array"].shape == (2, 3)
         assert np.all(data_dict["fixed_array"] == 0)
+
+    def test_create_data_dict_random(self):
+        """Test random data dictionary creation."""
+        fields = [
+            ccsdspy.PacketField(name="scalar", data_type="uint", bit_length=8),
+            ccsdspy.PacketArray(
+                name="fixed_array", data_type="uint", bit_length=16, array_shape=3
+            ),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        data_dict = generator._create_data_dict(count=2, use_random=True)
+
+        # Check scalar field exists and has correct shape
+        assert "scalar" in data_dict
+        assert data_dict["scalar"].shape == (2,)
+        # Very unlikely all random values are zero
+        assert not np.all(data_dict["scalar"] == 0)
+
+        # Check array field exists and has correct shape
+        assert "fixed_array" in data_dict
+        assert data_dict["fixed_array"].shape == (2, 3)
+        # Very unlikely all random values are zero
+        assert not np.all(data_dict["fixed_array"] == 0)
+
+    def test_random_uint_range(self):
+        """Test that random uint values respect bit length ranges."""
+        fields = [
+            ccsdspy.PacketField(name="uint8_field", data_type="uint", bit_length=8),
+            ccsdspy.PacketField(name="uint16_field", data_type="uint", bit_length=16),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        data_dict = generator._create_data_dict(count=100, use_random=True)
+
+        # uint8 should be in [0, 255]
+        assert np.all(data_dict["uint8_field"] >= 0)
+        assert np.all(data_dict["uint8_field"] <= 255)
+
+        # uint16 should be in [0, 65535]
+        assert np.all(data_dict["uint16_field"] >= 0)
+        assert np.all(data_dict["uint16_field"] <= 65535)
+
+    def test_random_int_range(self):
+        """Test that random int values respect bit length ranges."""
+        fields = [
+            ccsdspy.PacketField(name="int8_field", data_type="int", bit_length=8),
+            ccsdspy.PacketField(name="int16_field", data_type="int", bit_length=16),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        data_dict = generator._create_data_dict(count=100, use_random=True)
+
+        # int8 should be in [-128, 127]
+        assert np.all(data_dict["int8_field"] >= -128)
+        assert np.all(data_dict["int8_field"] <= 127)
+
+        # int16 should be in [-32768, 32767]
+        assert np.all(data_dict["int16_field"] >= -32768)
+        assert np.all(data_dict["int16_field"] <= 32767)
+
+    def test_random_float_generation(self):
+        """Test that random float values are generated."""
+        fields = [
+            ccsdspy.PacketField(name="temperature", data_type="float", bit_length=32),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        data_dict = generator._create_data_dict(count=10, use_random=True)
+
+        # Check that floats are not all zero
+        assert not np.all(data_dict["temperature"] == 0.0)
+        # Check that floats are in reasonable range
+        assert np.all(np.abs(data_dict["temperature"]) <= 1000.0)
+
+    def test_random_data_varies(self):
+        """Test that consecutive packets have different random data."""
+        fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        data_dict = generator._create_data_dict(count=10, use_random=True)
+
+        # Check that not all packets have the same value
+        # (extremely unlikely with random data)
+        assert not np.all(data_dict["data"] == data_dict["data"][0])
+
+    def test_write_packet_random(self):
+        """Test writing packets with random data."""
+        fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=3, use_random=True)
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        # Check that data is not all zeros (very unlikely with random)
+        assert not np.all(parsed["data"] == 0)
+        # Check that consecutive packets have different values
+        assert not np.all(parsed["data"] == parsed["data"][0])
