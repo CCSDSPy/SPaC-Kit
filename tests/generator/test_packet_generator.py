@@ -367,3 +367,116 @@ class TestPacketGenerator:
         assert not np.all(parsed["data"] == 0)
         # Check that consecutive packets have different values
         assert not np.all(parsed["data"] == parsed["data"][0])
+
+    def test_large_array_packet_zeros(self, test_output_dir):
+        """Test writing packets with large arrays (zero-initialized)."""
+        fields = [
+            ccsdspy.PacketField(name="counter", data_type="uint", bit_length=16),
+            ccsdspy.PacketArray(
+                name="large_data", data_type="uint", bit_length=16, array_shape=10000
+            ),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=400, name="LargePacket")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=2, use_random=False)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "large_array_zeros.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Each packet: 6-byte header + 2 bytes counter + 20000 bytes array
+        # = 20008 bytes per packet, 2 packets = 40016 bytes
+        assert len(written_data) == 40016
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["counter"]) == 2
+        assert len(parsed["large_data"]) == 2
+        # Verify all data is zero
+        assert np.all(parsed["counter"] == 0)
+        assert np.all(parsed["large_data"] == 0)
+        # Verify array shape
+        assert parsed["large_data"][0].shape == (10000,)
+
+    def test_large_array_packet_random(self, test_output_dir):
+        """Test writing packets with large arrays (random data)."""
+        fields = [
+            ccsdspy.PacketField(name="counter", data_type="uint", bit_length=16),
+            ccsdspy.PacketArray(
+                name="large_data", data_type="uint", bit_length=16, array_shape=10000
+            ),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=400, name="LargePacket")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=2, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "large_array_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Each packet: 6-byte header + 2 bytes counter + 20000 bytes array
+        assert len(written_data) == 40016
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["counter"]) == 2
+        assert len(parsed["large_data"]) == 2
+        # Verify array shape
+        assert parsed["large_data"][0].shape == (10000,)
+        # Check that data is not all zeros (very unlikely with random)
+        assert not np.all(parsed["large_data"] == 0)
+        # Check that the two packets have different random data
+        assert not np.array_equal(parsed["large_data"][0], parsed["large_data"][1])
+
+    def test_many_fields_packet(self, test_output_dir):
+        """Test writing packets with many fields."""
+        # Create a packet with 50 fields
+        fields = [
+            ccsdspy.PacketField(name=f"field_{i}", data_type="uint", bit_length=16)
+            for i in range(50)
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=500, name="ManyFieldsPacket")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=3, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "many_fields_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Each packet: 6-byte header + 100 bytes data (50 fields * 2 bytes)
+        # = 106 bytes per packet, 3 packets = 318 bytes
+        assert len(written_data) == 318
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        # Verify all fields exist and have correct length
+        for i in range(50):
+            field_name = f"field_{i}"
+            assert field_name in parsed
+            assert len(parsed[field_name]) == 3
+        # Check that data is not all zeros (very unlikely with random)
+        assert not np.all(parsed["field_0"] == 0)

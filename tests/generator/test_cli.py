@@ -184,3 +184,56 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "Success!" in captured.out
         assert "test.bin" in captured.out
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_generate_multiple_apids(self, mock_open, mock_import, capsys):
+        """Test generating packets for multiple specific APIDs."""
+        mock_packet1 = MagicMock()
+        mock_packet1.apid = 100
+        mock_packet1.name = "TestPacket1"
+        mock_packet1._fields = []
+
+        mock_packet2 = MagicMock()
+        mock_packet2.apid = 200
+        mock_packet2.name = "TestPacket2"
+        mock_packet2._fields = []
+
+        mock_packet3 = MagicMock()
+        mock_packet3.apid = 300
+        mock_packet3.name = "TestPacket3"
+        mock_packet3._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet1,
+                "variable_name": "test1",
+                "module_path": "test.module1",
+            },
+            {
+                "packet": mock_packet2,
+                "variable_name": "test2",
+                "module_path": "test.module2",
+            },
+            {
+                "packet": mock_packet3,
+                "variable_name": "test3",
+                "module_path": "test.module3",
+            },
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(
+            sys, "argv", ["cli", "--output", "test.bin", "--apid", "100", "300"]
+        ):
+            main()
+
+        captured = capsys.readouterr()
+        # Should generate for APID 100 and 300
+        assert "APID 100" in captured.out
+        assert "APID 300" in captured.out
+        # Should NOT generate for APID 200
+        assert "APID 200" not in captured.out
+        assert "Success!" in captured.out
