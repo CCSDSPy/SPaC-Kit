@@ -480,3 +480,217 @@ class TestPacketGenerator:
             assert len(parsed[field_name]) == 3
         # Check that data is not all zeros (very unlikely with random)
         assert not np.all(parsed["field_0"] == 0)
+
+    def test_fixed_length_packet_zeros(self, test_output_dir):
+        """Test writing FixedLength packets with zero-initialized data."""
+        fields = [
+            ccsdspy.PacketField(name="counter", data_type="uint", bit_length=16),
+            ccsdspy.PacketField(name="voltage", data_type="float", bit_length=32),
+            ccsdspy.PacketArray(
+                name="samples", data_type="uint", bit_length=8, array_shape=10
+            ),
+        ]
+        packet = ccsdspy.FixedLength(fields, apid=600)
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=3, use_random=False)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "fixed_length_zeros.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Each packet: 6-byte header + 2 counter + 4 voltage + 10 samples
+        # = 22 bytes per packet, 3 packets = 66 bytes
+        assert len(written_data) == 66
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["counter"]) == 3
+        assert np.all(parsed["counter"] == 0)
+        assert np.all(parsed["voltage"] == 0.0)
+        assert np.all(parsed["samples"] == 0)
+
+    def test_fixed_length_packet_random(self, test_output_dir):
+        """Test writing FixedLength packets with random data."""
+        fields = [
+            ccsdspy.PacketField(name="counter", data_type="uint", bit_length=16),
+            ccsdspy.PacketField(name="voltage", data_type="float", bit_length=32),
+            ccsdspy.PacketArray(
+                name="samples", data_type="uint", bit_length=8, array_shape=10
+            ),
+        ]
+        packet = ccsdspy.FixedLength(fields, apid=600)
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=3, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "fixed_length_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Each packet: 6-byte header + 2 counter + 4 voltage + 10 samples = 22 bytes
+        assert len(written_data) == 66
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["counter"]) == 3
+        # Check that data is not all zeros (very unlikely with random)
+        assert not np.all(parsed["counter"] == 0)
+        assert not np.all(parsed["voltage"] == 0.0)
+        assert not np.all(parsed["samples"] == 0)
+
+    def test_variable_length_expand_arrays(self, test_output_dir):
+        """Test packets with variable-length expand arrays."""
+        fields = [
+            ccsdspy.PacketField(name="seq_num", data_type="uint", bit_length=16),
+            ccsdspy.PacketArray(
+                name="var_data",
+                data_type="uint",
+                bit_length=8,
+                array_shape="expand",
+                array_order="C",
+            ),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=700, name="ExpandPacket")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=5, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "expand_arrays_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["seq_num"]) == 5
+        assert len(parsed["var_data"]) == 5
+        # Each packet should have different length arrays
+        lengths = [len(parsed["var_data"][i]) for i in range(5)]
+        # Very unlikely all 5 packets have the same random length
+        assert len(set(lengths)) > 1
+
+    def test_signed_integers_in_packets(self, test_output_dir):
+        """Test writing packets with signed integer fields."""
+        fields = [
+            ccsdspy.PacketField(name="int8_val", data_type="int", bit_length=8),
+            ccsdspy.PacketField(name="int16_val", data_type="int", bit_length=16),
+            ccsdspy.PacketField(name="int32_val", data_type="int", bit_length=32),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=800, name="SignedIntPacket")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=10, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "signed_integers_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["int8_val"]) == 10
+        # Verify ranges for signed integers
+        assert np.all(parsed["int8_val"] >= -128)
+        assert np.all(parsed["int8_val"] <= 127)
+        assert np.all(parsed["int16_val"] >= -32768)
+        assert np.all(parsed["int16_val"] <= 32767)
+        # Check that we have some negative values (very likely with 10 random samples)
+        assert np.any(parsed["int8_val"] < 0) or np.any(parsed["int16_val"] < 0)
+
+    def test_multidimensional_arrays(self, test_output_dir):
+        """Test packets with multi-dimensional arrays."""
+        fields = [
+            ccsdspy.PacketField(name="timestamp", data_type="uint", bit_length=32),
+            ccsdspy.PacketArray(
+                name="image_data", data_type="uint", bit_length=8, array_shape=(4, 5)
+            ),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=1000, name="ImagePacket")
+        generator = PacketGenerator(packet)
+
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=2, use_random=True)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "multidimensional_arrays_random.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["timestamp"]) == 2
+        assert len(parsed["image_data"]) == 2
+        # Verify multi-dimensional shape
+        assert parsed["image_data"][0].shape == (4, 5)
+        assert parsed["image_data"][1].shape == (4, 5)
+        # Check that data is not all zeros
+        assert not np.all(parsed["image_data"] == 0)
+
+    def test_large_sequence_counts(self, test_output_dir):
+        """Test large sequence counts approach 14-bit boundary.
+
+        Note: ccsdspy's encoder uses 14-bit sequence counts (0-16383).
+        Generating more than 16384 packets in a single write_packet call
+        will fail. For larger generation, call write_packet multiple times.
+        """
+        fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
+        packet = ccsdspy.VariableLength(fields, apid=1100, name="LargeSeqTest")
+        generator = PacketGenerator(packet)
+
+        # Generate packets approaching but not exceeding the 14-bit limit
+        count = 1000
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=count, use_random=False)
+
+        file_obj.seek(0)
+        written_data = file_obj.read()
+
+        # Save to output directory for review
+        output_file = test_output_dir / "large_sequence_counts.bin"
+        with open(output_file, "wb") as f:
+            f.write(written_data)
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["data"]) == count
+        # Verify sequence counts increment correctly
+        seq_counts = parsed["CCSDS_SEQUENCE_COUNT"]
+        assert seq_counts[0] == 0
+        assert seq_counts[999] == 999
+        # Verify all sequence counts are sequential
+        expected = np.arange(count)
+        assert np.array_equal(seq_counts, expected)

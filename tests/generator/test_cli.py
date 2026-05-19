@@ -237,3 +237,84 @@ class TestCLI:
         # Should NOT generate for APID 200
         assert "APID 200" not in captured.out
         assert "Success!" in captured.out
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    def test_missing_output_flag(self, mock_import, capsys):
+        """Test error when --output flag is missing."""
+        mock_packet = MagicMock()
+        mock_packet.apid = 100
+        mock_packet.name = "TestPacket"
+        mock_packet._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet,
+                "variable_name": "test1",
+                "module_path": "test.module",
+            }
+        ]
+
+        with patch.object(sys, "argv", ["cli"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "--output is required" in captured.err
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_zero_count(self, mock_open, mock_import, capsys):
+        """Test generating zero packets (edge case)."""
+        mock_packet = MagicMock()
+        mock_packet.apid = 100
+        mock_packet.name = "TestPacket"
+        mock_packet._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet,
+                "variable_name": "test1",
+                "module_path": "test.module",
+            }
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(sys, "argv", ["cli", "--output", "test.bin", "--count", "0"]):
+            main()
+
+        captured = capsys.readouterr()
+        assert "0 packet(s)" in captured.out
+        assert "Success!" in captured.out
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_large_count(self, mock_open, mock_import, capsys):
+        """Test generating a large number of packets."""
+        mock_packet = MagicMock()
+        mock_packet.apid = 100
+        mock_packet.name = "TestPacket"
+        mock_packet._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet,
+                "variable_name": "test1",
+                "module_path": "test.module",
+            }
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(
+            sys, "argv", ["cli", "--output", "test.bin", "--count", "10000"]
+        ):
+            main()
+
+        captured = capsys.readouterr()
+        assert "10000 packet(s)" in captured.out
+        assert "Success!" in captured.out
