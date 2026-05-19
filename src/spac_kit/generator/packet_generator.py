@@ -1,9 +1,11 @@
 """Generate CCSDS packets with zero/blank values from packet definitions."""
-import struct
 from typing import BinaryIO
 
 import ccsdspy
 import numpy as np
+from ccsdspy.encode import _encode_fixed_length
+from ccsdspy.encode import _encode_variable_length
+from ccsdspy.packet_types import _expand_array_fields
 
 
 class PacketGenerator:
@@ -66,106 +68,119 @@ class PacketGenerator:
         }
         return type_map.get(data_type, np.uint8)
 
-    def _calculate_field_bytes(self, field):
-        """Calculate the number of bytes needed for a field.
+    def _create_zero_data_dict(self, count: int) -> dict:
+        """Create a dictionary of zero-initialized arrays for packet generation.
 
         Args:
-            field: A CCSDSpy PacketField or PacketArray
+            count: Number of packets to generate
 
         Returns:
-            Number of bytes needed for the field
+            Dictionary mapping field names to numpy arrays of zeros
         """
-        bit_length = getattr(field, "_bit_length", 8)
-        array_shape = getattr(field, "_array_shape", None)
-
-        if array_shape == "expand":
-            return 0
-
-        if array_shape is not None:
-            if isinstance(array_shape, (tuple, list)):
-                total_elements = np.prod(array_shape)
-            else:
-                total_elements = array_shape
-            return int(total_elements * bit_length // 8)
-
-        return int((bit_length + 7) // 8)
-
-    def _generate_ccsds_header(
-        self,
-        apid: int,
-        sequence_count: int = 0,
-        data_length: int = 0,
-        packet_type: int = 0,
-        secondary_header_flag: int = 0,
-    ) -> bytes:
-        """Generate a CCSDS primary header.
-
-        Args:
-            apid: Application Process Identifier (11 bits)
-            sequence_count: Packet sequence count (14 bits)
-            data_length: Length of data field in bytes minus 1 (16 bits)
-            packet_type: 0 for telemetry, 1 for command (1 bit)
-            secondary_header_flag: 1 if secondary header present (1 bit)
-
-        Returns:
-            6-byte CCSDS primary header
-        """
-        version = 0
-        sequence_flags = 3
-
-        word1 = (
-            (version << 13) | (packet_type << 12) | (secondary_header_flag << 11) | apid
-        )
-        word2 = (sequence_flags << 14) | sequence_count
-        word3 = data_length
-
-        return struct.pack(">HHH", word1, word2, word3)
-
-    def generate_packet_data(self) -> bytes:
-        """Generate packet data with zero/blank values for all fields.
-
-        Returns:
-            Binary data for packet fields (without CCSDS header)
-        """
-        data_parts = []
+        data_dict = {}
 
         for field in self.packet._fields:
-            field_bytes = self._calculate_field_bytes(field)
+            field_name = field._name
+            data_type = field._data_type
+            array_shape = getattr(field, "_array_shape", None)
+            dtype = self._get_numpy_dtype(data_type)
 
-            if field_bytes > 0:
-                data_parts.append(b"\x00" * field_bytes)
+            # Handle variable-length fields (expand)
+            if array_shape == "expand":
+                # Create list of empty arrays, one per packet
+                data_dict[field_name] = [
+                    np.array([], dtype=dtype) for _ in range(count)
+                ]
+            # Handle fixed-size array fields
+            elif array_shape is not None:
+                if isinstance(array_shape, (tuple, list)):
+                    # Multi-dimensional array: shape is (count, *array_shape)
+                    full_shape = (count,) + tuple(array_shape)
+                else:
+                    # 1D array: shape is (count, array_shape)
+                    full_shape = (count, array_shape)
+                data_dict[field_name] = np.zeros(full_shape, dtype=dtype)
+            # Handle regular scalar fields
+            else:
+                data_dict[field_name] = np.zeros(count, dtype=dtype)
 
-        return b"".join(data_parts)
+        return data_dict
 
-    def generate_packet(self, sequence_count: int = 0) -> bytes:
-        """Generate a complete CCSDS packet with header and zero-filled data.
-
-        Args:
-            sequence_count: Packet sequence count (default: 0)
-
-        Returns:
-            Complete binary CCSDS packet (header + data)
-        """
-        data = self.generate_packet_data()
-        data_length = len(data) - 1 if len(data) > 0 else 0
-
-        header = self._generate_ccsds_header(
-            apid=self.apid, sequence_count=sequence_count, data_length=data_length
-        )
-
-        return header + data
-
-    def write_packet(self, file_obj: BinaryIO, sequence_count: int = 0, count: int = 1):
-        """Write one or more packets to a file.
+    def write_packet(self, file_obj: BinaryIO, count: int = 1):
+        """Write one or more packets to a file using ccsdspy's encoder.
 
         Args:
             file_obj: Binary file object to write to
-            sequence_count: Starting sequence count (default: 0)
             count: Number of packets to write (default: 1)
+
+        Note:
+            Sequence count starts from 0 and increments automatically.
         """
-        for i in range(count):
-            packet = self.generate_packet(sequence_count=sequence_count + i)
-            file_obj.write(packet)
+        # Create zero-initialized data dictionary
+        data = self._create_zero_data_dict(count)
+
+        # Handle empty packets (no fields)
+        # ccsdspy expects at least 1 byte of data (packet_nbytes = data_length + 7)
+        # For truly empty packets, we write data_length = 0 and 1 byte of padding
+        if not self.packet._fields:
+            # For empty packets, manually encode headers
+            import struct
+
+            for i in range(count):
+                version = 0
+                packet_type = 0
+                sec_header_flag = 0
+                sequence_flags = 3
+                data_length = (
+                    0  # Per CCSDS: data_length = num_data_bytes - 1, so 0 means 1 byte
+                )
+
+                word1 = (
+                    (version << 13)
+                    | (packet_type << 12)
+                    | (sec_header_flag << 11)
+                    | (self.apid & 0x7FF)  # Mask APID to 11 bits
+                )
+                word2 = (sequence_flags << 14) | (
+                    i & 0x3FFF
+                )  # Mask sequence count to 14 bits
+                word3 = data_length
+
+                header = struct.pack(">HHH", word1, word2, word3)
+                file_obj.write(header)
+                file_obj.write(b"\x00")  # Add 1 byte of padding for ccsdspy
+            return
+
+        # Expand array fields for encoding
+        expand_fields, _ = _expand_array_fields(self.packet._fields)
+
+        # Determine packet type (FixedLength or VariableLength)
+        is_variable = isinstance(self.packet, ccsdspy.VariableLength)
+
+        # Use ccsdspy's encode functions directly
+        if is_variable:
+            packet_bytes = _encode_variable_length(
+                fields=self.packet._fields,
+                expand_fields=expand_fields,
+                field_arrays=data,
+                pkt_type=0,  # 0 for telemetry
+                apid=self.apid,
+                sec_header_flag=0,  # No secondary header
+                seq_flag=3,  # Complete data in packet
+            )
+        else:
+            packet_bytes = _encode_fixed_length(
+                fields=self.packet._fields,
+                expand_fields=expand_fields,
+                field_arrays=data,
+                pkt_type=0,  # 0 for telemetry
+                apid=self.apid,
+                sec_header_flag=0,  # No secondary header
+                seq_flag=3,  # Complete data in packet
+            )
+
+        # Write the encoded packets to the file
+        file_obj.write(packet_bytes)
 
 
 def generate_packets_from_definitions(packets: list, output_path: str):

@@ -1,6 +1,5 @@
 """Unit tests for packet generator."""
 import io
-import struct
 
 import ccsdspy
 import numpy as np
@@ -59,69 +58,6 @@ class TestPacketGenerator:
         assert default.shape == (3, 4)
         assert np.all(default == 0)
 
-    def test_generate_ccsds_header(self):
-        """Test CCSDS header generation."""
-        fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
-        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
-        generator = PacketGenerator(packet)
-
-        header = generator._generate_ccsds_header(
-            apid=100, sequence_count=5, data_length=7
-        )
-
-        assert len(header) == 6
-        word1, word2, word3 = struct.unpack(">HHH", header)
-
-        version = (word1 >> 13) & 0x7
-        packet_type = (word1 >> 12) & 0x1
-        sec_hdr_flag = (word1 >> 11) & 0x1
-        apid = word1 & 0x7FF
-
-        assert version == 0
-        assert packet_type == 0
-        assert sec_hdr_flag == 0
-        assert apid == 100
-
-        seq_flags = (word2 >> 14) & 0x3
-        seq_count = word2 & 0x3FFF
-        assert seq_flags == 3
-        assert seq_count == 5
-
-        assert word3 == 7
-
-    def test_generate_packet_simple(self):
-        """Test packet generation with simple fields."""
-        fields = [
-            ccsdspy.PacketField(name="field1", data_type="uint", bit_length=8),
-            ccsdspy.PacketField(name="field2", data_type="uint", bit_length=16),
-        ]
-        packet = ccsdspy.VariableLength(fields, apid=100, name="TestPacket")
-        generator = PacketGenerator(packet)
-
-        packet_bytes = generator.generate_packet()
-
-        assert len(packet_bytes) == 6 + 3
-        header = packet_bytes[:6]
-        data = packet_bytes[6:]
-
-        assert len(header) == 6
-        assert len(data) == 3
-        assert data == b"\x00\x00\x00"
-
-    def test_generate_packet_with_sequence_count(self):
-        """Test packet generation with specific sequence count."""
-        fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
-        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
-        generator = PacketGenerator(packet)
-
-        packet_bytes = generator.generate_packet(sequence_count=42)
-
-        header = packet_bytes[:6]
-        word1, word2, word3 = struct.unpack(">HHH", header)
-
-        seq_count = word2 & 0x3FFF
-        assert seq_count == 42
-
     def test_write_single_packet(self):
         """Test writing a single packet to file."""
         fields = [
@@ -137,7 +73,18 @@ class TestPacketGenerator:
         file_obj.seek(0)
         written_data = file_obj.read()
 
+        # Verify packet was written (6-byte header + 3 bytes data)
         assert len(written_data) == 6 + 3
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["field1"]) == 1
+        assert parsed["field1"][0] == 0
+        assert parsed["field2"][0] == 0
+        assert parsed["CCSDS_APID"][0] == 100
+        assert parsed["CCSDS_SEQUENCE_COUNT"][0] == 0
 
     def test_write_multiple_packets(self):
         """Test writing multiple packets with incrementing sequence counts."""
@@ -154,42 +101,20 @@ class TestPacketGenerator:
         packet_size = 6 + 1
         assert len(written_data) == packet_size * 3
 
-        for i in range(3):
-            offset = i * packet_size
-            header = written_data[offset : offset + 6]
-            word1, word2, word3 = struct.unpack(">HHH", header)
-            seq_count = word2 & 0x3FFF
-            assert seq_count == i
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
 
-    def test_calculate_field_bytes(self):
-        """Test byte calculation for different field types."""
-        fields = [ccsdspy.PacketField(name="data", data_type="uint", bit_length=8)]
-        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
-        generator = PacketGenerator(packet)
+        assert len(parsed["data"]) == 3
+        # Verify all data is zero
+        assert np.all(parsed["data"] == 0)
+        # Verify sequence counts
+        assert np.array_equal(parsed["CCSDS_SEQUENCE_COUNT"], [0, 1, 2])
+        # Verify APID
+        assert np.all(parsed["CCSDS_APID"] == 100)
 
-        field_8bit = ccsdspy.PacketField(name="f1", data_type="uint", bit_length=8)
-        assert generator._calculate_field_bytes(field_8bit) == 1
-
-        field_16bit = ccsdspy.PacketField(name="f2", data_type="uint", bit_length=16)
-        assert generator._calculate_field_bytes(field_16bit) == 2
-
-        field_32bit = ccsdspy.PacketField(name="f3", data_type="uint", bit_length=32)
-        assert generator._calculate_field_bytes(field_32bit) == 4
-
-    def test_calculate_field_bytes_array(self):
-        """Test byte calculation for array fields."""
-        fields = [
-            ccsdspy.PacketArray(
-                name="data", data_type="uint", bit_length=8, array_shape=(2, 3)
-            )
-        ]
-        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
-        generator = PacketGenerator(packet)
-
-        assert generator._calculate_field_bytes(fields[0]) == 6
-
-    def test_packet_with_array_fields(self):
-        """Test packet generation with array fields."""
+    def test_write_packet_with_array_fields(self):
+        """Test writing packets with array fields."""
         fields = [
             ccsdspy.PacketField(name="header", data_type="uint", bit_length=8),
             ccsdspy.PacketArray(
@@ -200,16 +125,25 @@ class TestPacketGenerator:
         packet = ccsdspy.VariableLength(fields, apid=200, name="ArrayPacket")
         generator = PacketGenerator(packet)
 
-        packet_bytes = generator.generate_packet()
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=2)
 
-        header = packet_bytes[:6]
-        data = packet_bytes[6:]
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
 
-        assert len(data) == 1 + 5 + 2
-        assert data == b"\x00" * 8
+        assert len(parsed["header"]) == 2
+        assert len(parsed["array_data"]) == 2
+        assert len(parsed["footer"]) == 2
+        # Verify all data is zero
+        assert np.all(parsed["header"] == 0)
+        assert np.all(parsed["array_data"] == 0)
+        assert np.all(parsed["footer"] == 0)
+        # Verify array shape
+        assert parsed["array_data"][0].shape == (5,)
 
-    def test_packet_with_float_fields(self):
-        """Test packet generation with float fields."""
+    def test_write_packet_with_float_fields(self):
+        """Test writing packets with float fields."""
         fields = [
             ccsdspy.PacketField(name="temperature", data_type="float", bit_length=32),
             ccsdspy.PacketField(name="pressure", data_type="float", bit_length=32),
@@ -217,11 +151,18 @@ class TestPacketGenerator:
         packet = ccsdspy.VariableLength(fields, apid=300, name="SensorPacket")
         generator = PacketGenerator(packet)
 
-        packet_bytes = generator.generate_packet()
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj, count=2)
 
-        data = packet_bytes[6:]
-        assert len(data) == 8
-        assert data == b"\x00" * 8
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["temperature"]) == 2
+        assert len(parsed["pressure"]) == 2
+        # Verify all data is zero
+        assert np.all(parsed["temperature"] == 0.0)
+        assert np.all(parsed["pressure"] == 0.0)
 
     def test_different_apids(self):
         """Test packet generation for different APIDs."""
@@ -230,41 +171,56 @@ class TestPacketGenerator:
             packet = ccsdspy.VariableLength(fields, apid=apid, name=f"Test{apid}")
             generator = PacketGenerator(packet)
 
-            packet_bytes = generator.generate_packet()
-            header = packet_bytes[:6]
-            word1, word2, word3 = struct.unpack(">HHH", header)
+            file_obj = io.BytesIO()
+            generator.write_packet(file_obj)
 
-            extracted_apid = word1 & 0x7FF
-            assert extracted_apid == apid
+            # Verify by parsing back with ccsdspy
+            file_obj.seek(0)
+            parsed = packet.load(file_obj, include_primary_header=True)
 
-    def test_packet_length_field(self):
-        """Test that packet length field is correctly calculated."""
-        fields = [
-            ccsdspy.PacketField(name="data1", data_type="uint", bit_length=8),
-            ccsdspy.PacketField(name="data2", data_type="uint", bit_length=16),
-            ccsdspy.PacketField(name="data3", data_type="uint", bit_length=32),
-        ]
-        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
-        generator = PacketGenerator(packet)
-
-        packet_bytes = generator.generate_packet()
-
-        header = packet_bytes[:6]
-        word1, word2, word3 = struct.unpack(">HHH", header)
-
-        data_length = len(packet_bytes) - 6 - 1
-        assert word3 == data_length
+            assert parsed["CCSDS_APID"][0] == apid
 
     def test_empty_packet(self):
-        """Test packet generation with no data fields."""
+        """Test writing packets with no data fields."""
         fields = []
         packet = ccsdspy.VariableLength(fields, apid=100, name="EmptyPacket")
         generator = PacketGenerator(packet)
 
-        packet_bytes = generator.generate_packet()
+        file_obj = io.BytesIO()
+        generator.write_packet(file_obj)
 
-        assert len(packet_bytes) == 6
+        file_obj.seek(0)
+        written_data = file_obj.read()
 
-        header = packet_bytes[:6]
-        word1, word2, word3 = struct.unpack(">HHH", header)
-        assert word3 == 0
+        # 6-byte header + 1 byte padding (ccsdspy requires at least 1 byte of data)
+        assert len(written_data) == 7
+
+        # Verify by parsing back with ccsdspy
+        file_obj.seek(0)
+        parsed = packet.load(file_obj, include_primary_header=True)
+
+        assert len(parsed["CCSDS_APID"]) == 1
+        assert parsed["CCSDS_APID"][0] == 100
+
+    def test_create_zero_data_dict(self):
+        """Test zero data dictionary creation."""
+        fields = [
+            ccsdspy.PacketField(name="scalar", data_type="uint", bit_length=8),
+            ccsdspy.PacketArray(
+                name="fixed_array", data_type="uint", bit_length=16, array_shape=3
+            ),
+        ]
+        packet = ccsdspy.VariableLength(fields, apid=100, name="Test")
+        generator = PacketGenerator(packet)
+
+        data_dict = generator._create_zero_data_dict(count=2)
+
+        # Check scalar field
+        assert "scalar" in data_dict
+        assert data_dict["scalar"].shape == (2,)
+        assert np.all(data_dict["scalar"] == 0)
+
+        # Check array field
+        assert "fixed_array" in data_dict
+        assert data_dict["fixed_array"].shape == (2, 3)
+        assert np.all(data_dict["fixed_array"] == 0)
