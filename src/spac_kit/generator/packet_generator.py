@@ -36,10 +36,14 @@ class PacketGenerator:
 
         if array_shape is not None:
             if array_shape == "expand":
-                return np.array([], dtype=self._get_numpy_dtype(data_type))
+                return np.array([], dtype=self._get_numpy_dtype(data_type, bit_length))
             if isinstance(array_shape, (tuple, list)):
-                return np.zeros(array_shape, dtype=self._get_numpy_dtype(data_type))
-            return np.zeros(array_shape, dtype=self._get_numpy_dtype(data_type))
+                return np.zeros(
+                    array_shape, dtype=self._get_numpy_dtype(data_type, bit_length)
+                )
+            return np.zeros(
+                array_shape, dtype=self._get_numpy_dtype(data_type, bit_length)
+            )
 
         if data_type in ("uint", "int"):
             return 0
@@ -51,22 +55,40 @@ class PacketGenerator:
 
         return 0
 
-    def _get_numpy_dtype(self, data_type: str):
-        """Convert CCSDSpy data type to numpy dtype.
+    def _get_numpy_dtype(self, data_type: str, bit_length: int = 8):
+        """Convert CCSDSpy data type to numpy dtype based on bit length.
 
         Args:
             data_type: CCSDSpy data type string
+            bit_length: Number of bits (used for uint/int types)
 
         Returns:
             Corresponding numpy dtype
         """
-        type_map = {
-            "uint": np.uint8,
-            "int": np.int8,
-            "float": np.float32,
-            "double": np.float64,
-        }
-        return type_map.get(data_type, np.uint8)
+        if data_type == "uint":
+            if bit_length <= 8:
+                return np.uint8
+            elif bit_length <= 16:
+                return np.uint16
+            elif bit_length <= 32:
+                return np.uint32
+            else:
+                return np.uint64
+        elif data_type == "int":
+            if bit_length <= 8:
+                return np.int8
+            elif bit_length <= 16:
+                return np.int16
+            elif bit_length <= 32:
+                return np.int32
+            else:
+                return np.int64
+        elif data_type == "float":
+            return np.float32
+        elif data_type == "double":
+            return np.float64
+        else:
+            return np.uint8
 
     def _generate_random_uint(self, bit_length: int, dtype, size):
         """Generate random unsigned integer array respecting bit length.
@@ -148,7 +170,7 @@ class PacketGenerator:
             data_type = field._data_type
             bit_length = field._bit_length
             array_shape = getattr(field, "_array_shape", None)
-            dtype = self._get_numpy_dtype(data_type)
+            dtype = self._get_numpy_dtype(data_type, bit_length)
 
             # Case 1: Variable-length fields (expand)
             if array_shape == "expand":
