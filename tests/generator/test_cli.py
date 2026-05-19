@@ -318,3 +318,140 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "10000 packet(s)" in captured.out
         assert "Success!" in captured.out
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_generate_specific_module(self, mock_open, mock_import, capsys):
+        """Test generating packets for specific module path."""
+        mock_packet1 = MagicMock()
+        mock_packet1.apid = 100
+        mock_packet1.name = "TestPacket1"
+        mock_packet1._fields = []
+
+        mock_packet2 = MagicMock()
+        mock_packet2.apid = 200
+        mock_packet2.name = "TestPacket2"
+        mock_packet2._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet1,
+                "variable_name": "test1",
+                "module_path": "test.module1",
+            },
+            {
+                "packet": mock_packet2,
+                "variable_name": "test2",
+                "module_path": "test.module2",
+            },
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(
+            sys, "argv", ["cli", "--output", "test.bin", "--module", "test.module1"]
+        ):
+            main()
+
+        captured = capsys.readouterr()
+        assert "APID 100" in captured.out
+        assert "TestPacket1" in captured.out
+        assert "Success!" in captured.out
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_generate_multiple_modules(self, mock_open, mock_import, capsys):
+        """Test generating packets for multiple module paths."""
+        mock_packet1 = MagicMock()
+        mock_packet1.apid = 100
+        mock_packet1.name = "TestPacket1"
+        mock_packet1._fields = []
+
+        mock_packet2 = MagicMock()
+        mock_packet2.apid = 200
+        mock_packet2.name = "TestPacket2"
+        mock_packet2._fields = []
+
+        mock_packet3 = MagicMock()
+        mock_packet3.apid = 300
+        mock_packet3.name = "TestPacket3"
+        mock_packet3._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet1,
+                "variable_name": "test1",
+                "module_path": "test.module1",
+            },
+            {
+                "packet": mock_packet2,
+                "variable_name": "test2",
+                "module_path": "test.module2",
+            },
+            {
+                "packet": mock_packet3,
+                "variable_name": "test3",
+                "module_path": "test.module3",
+            },
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(
+            sys,
+            "argv",
+            ["cli", "--output", "test.bin", "--module", "test.module1", "test.module3"],
+        ):
+            main()
+
+        captured = capsys.readouterr()
+        assert "APID 100" in captured.out
+        assert "APID 300" in captured.out
+        assert "APID 200" not in captured.out
+        assert "Success!" in captured.out
+
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    def test_invalid_module(self, mock_import, capsys):
+        """Test error when requesting non-existent module path."""
+        mock_packet = MagicMock()
+        mock_packet.apid = 100
+        mock_packet.name = "TestPacket"
+        mock_packet._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet,
+                "variable_name": "test1",
+                "module_path": "test.module1",
+            }
+        ]
+
+        with patch.object(
+            sys,
+            "argv",
+            ["cli", "--output", "test.bin", "--module", "nonexistent.module"],
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "No packets found" in captured.err
+
+    def test_apid_and_module_mutually_exclusive(self, capsys):
+        """Test that --apid and --module cannot be used together."""
+        with patch.object(
+            sys,
+            "argv",
+            ["cli", "--output", "test.bin", "--apid", "100", "--module", "test.module"],
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+            assert exc_info.value.code == 2  # argparse error code
+
+        captured = capsys.readouterr()
+        assert "not allowed with argument" in captured.err

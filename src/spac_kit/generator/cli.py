@@ -73,14 +73,26 @@ def main():
         "--output",
         help="Output file path for generated packets",
     )
-    parser.add_argument(
+    # Mutually exclusive group for packet selection
+    selection_group = parser.add_mutually_exclusive_group()
+    selection_group.add_argument(
         "-a",
         "--apid",
         type=int,
         nargs="+",
         help=(
             "Generate packets for specific APID(s). "
-            "If not specified, generates for all APIDs."
+            "If not specified, generates for all packets."
+        ),
+    )
+    selection_group.add_argument(
+        "-m",
+        "--module",
+        type=str,
+        nargs="+",
+        help=(
+            "Generate packets for specific module path(s). "
+            "Use the module path shown by 'spac-ls'."
         ),
     )
     parser.add_argument(
@@ -88,7 +100,7 @@ def main():
         "--count",
         type=int,
         default=1,
-        help="Number of packets to generate per APID (default: 1)",
+        help="Number of packets to generate per packet definition (default: 1)",
     )
     parser.add_argument(
         "-z",
@@ -125,12 +137,21 @@ def main():
         print("Error: --output is required when generating packets", file=sys.stderr)
         sys.exit(1)
 
+    # Filter packets based on --apid or --module
     selected_packets = packets
     if args.apid:
         selected_packets = [p for p in packets if p["packet"].apid in args.apid]
         if not selected_packets:
             print(
                 f"Error: No packets found with APID(s): {args.apid}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    elif args.module:
+        selected_packets = [p for p in packets if p["module_path"] in args.module]
+        if not selected_packets:
+            print(
+                f"Error: No packets found with module path(s): {args.module}",
                 file=sys.stderr,
             )
             sys.exit(1)
