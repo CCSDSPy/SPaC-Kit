@@ -7,8 +7,9 @@
 **SpaC-Kit** is a collection of Python tools for working with **CCSDS Space Packets**. It can generically:
 
 - Parses data files into **Pandas DataFrames** or **Excel spreadsheets**
-- Generates CCSDS packets with zero/blank-initialized fields for testing
-- **(Scheduled Feb 2026)** – Generates documentation in multiple formats (**HTML**, **Markdown**, **reStructuredText**, **PDF**)
+- Generates CCSDS packets with randomized/zero-initialized fields for testing
+- Generates documentation in multiple formats (using sphynx)
+- **(Scheduled May 2026)** – Generates simulated packets
 
 SpaC-Kit supports mission or instrument-specific CCSDS packet structures via **plugin** packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
 
