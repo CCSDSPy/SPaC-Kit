@@ -1,4 +1,5 @@
 """Generate CCSDS packets with zero/blank values from packet definitions."""
+import struct
 from typing import BinaryIO
 
 import ccsdspy
@@ -8,7 +9,7 @@ from ccsdspy.encode import _encode_variable_length
 from ccsdspy.packet_types import _expand_array_fields
 
 
-class PacketGenerator:
+class PacketGenerator:  # pylint: disable=too-few-public-methods
     """Generate CCSDS packets from packet definitions."""
 
     def __init__(self, packet: ccsdspy.packet_types._BasePacket):
@@ -21,7 +22,7 @@ class PacketGenerator:
         self.name = getattr(packet, "name", "UnnamedPacket")
         self.apid = getattr(packet, "apid", 0)
 
-    def _get_default_value(self, field):
+    def _get_default_value(self, field):  # pylint: disable=too-many-return-statements
         """Get default zero/blank value for a field based on its data type.
 
         Args:
@@ -55,6 +56,7 @@ class PacketGenerator:
 
         return 0
 
+    # pylint: disable=too-many-return-statements,too-many-branches
     def _get_numpy_dtype(self, data_type: str, bit_length: int = 8):
         """Convert CCSDSpy data type to numpy dtype based on bit length.
 
@@ -68,27 +70,24 @@ class PacketGenerator:
         if data_type == "uint":
             if bit_length <= 8:
                 return np.uint8
-            elif bit_length <= 16:
+            if bit_length <= 16:
                 return np.uint16
-            elif bit_length <= 32:
+            if bit_length <= 32:
                 return np.uint32
-            else:
-                return np.uint64
-        elif data_type == "int":
+            return np.uint64
+        if data_type == "int":
             if bit_length <= 8:
                 return np.int8
-            elif bit_length <= 16:
+            if bit_length <= 16:
                 return np.int16
-            elif bit_length <= 32:
+            if bit_length <= 32:
                 return np.int32
-            else:
-                return np.int64
-        elif data_type == "float":
+            return np.int64
+        if data_type == "float":
             return np.float32
-        elif data_type == "double":
+        if data_type == "double":
             return np.float64
-        else:
-            return np.uint8
+        return np.uint8
 
     def _generate_random_uint(self, bit_length: int, dtype, size):
         """Generate random unsigned integer array respecting bit length.
@@ -111,20 +110,18 @@ class PacketGenerator:
         if dtype == np.uint8:
             temp = np.random.randint(0, max_val, size=size, dtype=np.uint16)
             return temp.astype(np.uint8)
-        elif dtype == np.uint16:
+        if dtype == np.uint16:
             temp = np.random.randint(0, max_val, size=size, dtype=np.uint32)
             return temp.astype(np.uint16)
-        elif dtype == np.uint32:
+        if dtype == np.uint32:
             temp = np.random.randint(0, max_val, size=size, dtype=np.uint64)
             return temp.astype(np.uint32)
-        else:
-            # uint64 - use int64 for generation if possible
-            if max_val <= np.iinfo(np.int64).max:
-                temp = np.random.randint(0, max_val, size=size, dtype=np.int64)
-                return temp.astype(np.uint64)
-            else:
-                # For very large uint64, accept the limitation
-                return np.random.randint(0, max_val, size=size, dtype=np.uint64)
+        # uint64 - use int64 for generation if possible
+        if max_val <= np.iinfo(np.int64).max:
+            temp = np.random.randint(0, max_val, size=size, dtype=np.int64)
+            return temp.astype(np.uint64)
+        # For very large uint64, accept the limitation
+        return np.random.randint(0, max_val, size=size, dtype=np.uint64)
 
     def _generate_random_int(self, bit_length: int, dtype, size):
         """Generate random signed integer array respecting bit length.
@@ -148,15 +145,14 @@ class PacketGenerator:
         if dtype == np.int8:
             temp = np.random.randint(min_val, max_val, size=size, dtype=np.int16)
             return temp.astype(np.int8)
-        elif dtype == np.int16:
+        if dtype == np.int16:
             temp = np.random.randint(min_val, max_val, size=size, dtype=np.int32)
             return temp.astype(np.int16)
-        elif dtype == np.int32:
+        if dtype == np.int32:
             temp = np.random.randint(min_val, max_val, size=size, dtype=np.int64)
             return temp.astype(np.int32)
-        else:
-            # int64 - accept the limitation at the boundary
-            return np.random.randint(min_val, max_val, size=size, dtype=np.int64)
+        # int64 - accept the limitation at the boundary
+        return np.random.randint(min_val, max_val, size=size, dtype=np.int64)
 
     def _generate_random_float(self, dtype, size):
         """Generate random float array.
@@ -184,12 +180,11 @@ class PacketGenerator:
         """
         if data_type == "uint":
             return self._generate_random_uint(bit_length, dtype, size)
-        elif data_type == "int":
+        if data_type == "int":
             return self._generate_random_int(bit_length, dtype, size)
-        elif data_type in ("float", "double"):
+        if data_type in ("float", "double"):
             return self._generate_random_float(dtype, size)
-        else:
-            return np.zeros(size, dtype=dtype)
+        return np.zeros(size, dtype=dtype)
 
     def _create_data_dict(self, count: int, use_random: bool = True) -> dict:
         """Create a dictionary of arrays for packet generation.
@@ -204,10 +199,10 @@ class PacketGenerator:
         """
         data_dict = {}
 
-        for field in self.packet._fields:
-            field_name = field._name
-            data_type = field._data_type
-            bit_length = field._bit_length
+        for field in self.packet._fields:  # pylint: disable=protected-access
+            field_name = field._name  # pylint: disable=protected-access
+            data_type = field._data_type  # pylint: disable=protected-access
+            bit_length = field._bit_length  # pylint: disable=protected-access
             array_shape = getattr(field, "_array_shape", None)
             dtype = self._get_numpy_dtype(data_type, bit_length)
 
@@ -244,9 +239,9 @@ class PacketGenerator:
         """
         if isinstance(array_shape, (tuple, list)):
             return (count,) + tuple(array_shape)
-        else:
-            return (count, array_shape)
+        return (count, array_shape)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _create_variable_length_data(
         self, count: int, data_type: str, bit_length: int, dtype, use_random: bool
     ):
@@ -272,6 +267,7 @@ class PacketGenerator:
             result.append(arr)
         return result
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _create_array_data(
         self,
         data_type: str,
@@ -297,6 +293,7 @@ class PacketGenerator:
 
         return self._generate_random_data(data_type, bit_length, dtype, shape)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def _create_scalar_data(
         self, count: int, data_type: str, bit_length: int, dtype, use_random: bool
     ):
@@ -317,7 +314,9 @@ class PacketGenerator:
 
         return self._generate_random_data(data_type, bit_length, dtype, count)
 
-    def write_packet(self, file_obj: BinaryIO, count: int = 1, use_random: bool = True):
+    def write_packet(  # pylint: disable=too-many-locals
+        self, file_obj: BinaryIO, count: int = 1, use_random: bool = True
+    ):
         """Write one or more packets to a file using ccsdspy's encoder.
 
         Args:
@@ -335,10 +334,8 @@ class PacketGenerator:
         # Handle empty packets (no fields)
         # ccsdspy expects at least 1 byte of data (packet_nbytes = data_length + 7)
         # For truly empty packets, we write data_length = 0 and 1 byte of padding
-        if not self.packet._fields:
+        if not self.packet._fields:  # pylint: disable=protected-access
             # For empty packets, manually encode headers
-            import struct
-
             for i in range(count):
                 version = 0
                 packet_type = 0

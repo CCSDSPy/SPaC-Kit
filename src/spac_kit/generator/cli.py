@@ -63,7 +63,7 @@ def calculate_chi_squared(data: bytes) -> tuple[float, float]:
     return chi2_stat, p_value
 
 
-def main():
+def main():  # pylint: disable=too-many-locals
     """Main entry point for packet generator CLI."""
     parser = argparse.ArgumentParser(
         description="Generate CCSDS packets from packet definitions"
@@ -174,7 +174,7 @@ def main():
 
     file_size = len(file_data)
     entropy = calculate_shannon_entropy(file_data)
-    chi2_stat, p_value = calculate_chi_squared(file_data)
+    _, p_value = calculate_chi_squared(file_data)
 
     # Format output
     entropy_pct = (entropy / 8.0) * 100
