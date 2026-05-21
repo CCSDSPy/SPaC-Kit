@@ -129,6 +129,8 @@ def strip_non_ccsds_headers(
     Remove all cases of non CCSDS headers which can occur in
     Europa-Clipper SDS inputs, mostly in test cases.
 
+    By default, we consider there is not packet non CCSDS packet markers or headers.
+
     @param filename: input binary filename
     @param is_bdsem: file coming from BDSEM, else RAW
     @param has_pkt_header:
