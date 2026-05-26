@@ -136,3 +136,6 @@ demo.xlsx
 demo_report.txt
 .DS_Store
 .idea
+
+# Test output files
+tests/generator/output/

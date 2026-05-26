@@ -1,0 +1,3 @@
+tests/generator/output/csv/
+tests/generator/output/plots/
+tests/generator/.viz_venv/
