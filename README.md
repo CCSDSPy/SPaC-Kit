@@ -1,17 +1,20 @@
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
-
 # SPaC-Kit
+
+[![Lint, test, and release](https://github.com/CCSDSPy/SPaC-Kit/actions/workflows/ci.yml/badge.svg)](https://github.com/CCSDSPy/SPaC-Kit/actions/workflows/ci.yml)
+[![Publish new release](https://github.com/CCSDSPy/SPaC-Kit/actions/workflows/publish.yml/badge.svg)](https://github.com/CCSDSPy/SPaC-Kit/actions/workflows/publish.yml)
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 ## ✨ Introduction
 
 **SpaC-Kit** is a collection of Python tools for working with **CCSDS Space Packets**. It can generically:
 
-- Parses data files into **Pandas DataFrames** or **Excel spreadsheets**
-- Generates CCSDS packets with randomized/zero-initialized fields for testing
-- Generates documentation in multiple formats (using sphynx)
-- **(Scheduled May 2026)** – Generates simulated packets
+- Parse data files into **Pandas DataFrames** or **Excel spreadsheets**
+- Generate simulated CCSDS packets with randomized/zero-initialized fields for testing
+- Generate automatic documentation for packets with a Sphinx extension
 
-SpaC-Kit supports mission or instrument-specific CCSDS packet structures via **plugin** packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
+SpaC-Kit supports mission or instrument-specific CCSDS packet structures via plugin packages built on the [**CCSDSPy** library](https://docs.ccsdspy.org/).
 
 > [!IMPORTANT]
 > **This library is currently in active development.**
@@ -50,23 +53,72 @@ Install the SPaC-Kit package:
 
 ### Use
 
-#### Parse CCSDS packets
+SPaC-Kit provides three main capabilities for working with CCSDS packets:
 
-    spac-parse --file {your ccsds file}
+#### 1. 📄 Parsing CCSDS Packets (`spac-parse`)
 
-See more options with:
+The `spac-parse` command parses binary CCSDS packet files and outputs structured data in various formats.
+
+**Basic usage:**
+
+    spac-parse --file {your_ccsds_file}
+
+**Output formats:**
+
+Export to Excel (default):
+
+    spac-parse --file packets.bin --output data.xlsx
+
+Export to CSV:
+
+    spac-parse --file packets.bin --format csv --output data.csv
+
+Export to Pandas DataFrame pickle:
+
+    spac-parse --file packets.bin --format pickle --output data.pkl
+
+**Filtering options:**
+
+Parse only specific APID(s):
+
+    spac-parse --file packets.bin --apid 100 200 --output filtered.xlsx
+
+**Advanced options:**
+
+See all available options:
 
     spac-parse --help
 
-#### Generate CCSDS packets
+**Programmatic usage:**
+
+```python
+from spac_kit.parser import parse_packets
+
+# Parse packets and get DataFrame
+df = parse_packets("packets.bin", apids=[100, 200])
+
+# Access parsed data
+print(df.head())
+print(df["temperature"].mean())
+```
+
+#### 2. 🔧 Generating CCSDS Packets (`spac-generate`)
+
+The `spac-generate` command creates simulated CCSDS packets for testing and development.
+
+**Basic usage:**
 
 Generate packets with random data for all installed packet definitions:
 
     spac-generate --output packets.bin
 
+**Data initialization options:**
+
 Generate packets with zero-initialized data:
 
     spac-generate --output packets.bin --zeros
+
+**Filtering and quantity:**
 
 Generate packets for specific APID(s):
 
@@ -76,15 +128,19 @@ Generate multiple packets per APID:
 
     spac-generate --output packets.bin --count 10
 
+**Listing definitions:**
+
 List available packet definitions:
 
     spac-ls
 
-See more options with:
+**Advanced options:**
+
+See all available options:
 
     spac-generate --help
 
-#### Programmatic usage
+**Programmatic usage:**
 
 The packet generator creates valid CCSDS packets, useful for testing packet parsing pipelines.
 
@@ -108,6 +164,31 @@ with open("packets.bin", "wb") as f:
 with open("zeros.bin", "wb") as f:
     generator.write_packet(f, count=5, use_random=False)
 ```
+
+#### 3. 📚 Automatic Documentation (`spac-autodocs`)
+
+SPaC-Kit includes a Sphinx extension for automatically generating documentation for CCSDS packet definitions.
+
+**Setup:**
+
+Add to your Sphinx `conf.py`:
+
+```python
+extensions = [
+    'spac_kit.sphinx_ext',
+    # ... other extensions
+]
+```
+
+**Usage in documentation:**
+
+```rst
+.. spac-autodocs::
+   :apid: 100
+   :name: SensorPacket
+```
+
+This will generate formatted documentation including field names, types, bit lengths, and descriptions from your packet definitions.
 
 
 ## Developers
@@ -176,9 +257,7 @@ Publish the project:
 
 - The package is released following [Semantic Versioning](https://semver.org/).
 - We follow the [trunk-based branching strategy](https://www.atlassian.com/continuous-delivery/continuous-integration/trunk-based-development) since the development team is current reduced and we want to favor efficient of the releases. That mean we don't have a 'develop' branch.
-- TO BE DONE: Continuous integration using GitHub Actions. It runs linting, unit test and code coverage on each Pull Request.
 - The code follows the [PEP-8](https://peps.python.org/pep-0008/) style guide using [black](https://black.readthedocs.io/en/stable/) for formatting and [flake8](https://flake8.pycqa.org/en/latest/) for linting.
-
 
 
 ## Acknowledgments
