@@ -120,11 +120,16 @@ def start_sequence(seq):
 
 
 def strip_non_ccsds_headers(
-    file_handler, is_bdsem: bool, has_pkt_header: bool, has_json_header: bool
+    file_handler,
+    is_bdsem: bool = False,
+    has_pkt_header: bool = False,
+    has_json_header: bool = False,
 ):
     """
     Remove all cases of non CCSDS headers which can occur in
     Europa-Clipper SDS inputs, mostly in test cases.
+
+    By default, we consider there is not packet non CCSDS packet markers or headers.
 
     @param filename: input binary filename
     @param is_bdsem: file coming from BDSEM, else RAW

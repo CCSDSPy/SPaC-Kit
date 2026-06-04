@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 def compare(
     local_dir: str,
-    is_bdsem: bool,
-    has_pkt_header: bool,
-    has_json_header: bool,
+    is_bdsem: bool = False,
+    has_pkt_header: bool = False,
+    has_json_header: bool = False,
     create_output: bool = False,
     create_spreadsheet: bool = False,
 ):
