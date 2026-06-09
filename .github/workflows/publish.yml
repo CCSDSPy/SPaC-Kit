@@ -42,35 +42,3 @@ jobs:
           poetry config repositories.${{ vars.PYPI_REPOSITORY }} ${{ vars.PYPI_REPOSITORY_URL }}
           poetry config pypi-token.${{ vars.PYPI_REPOSITORY }} ${{ secrets.PYPI_TOKEN }}
           poetry publish --build --no-interaction --repository ${{ vars.PYPI_REPOSITORY }}
-
-  publish_docs:
-    runs-on: ubuntu-latest
-    container:
-      image: python:3.12-slim
-    needs: publish_to_pypi
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    concurrency:
-      group: "pages"
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Poetry
-        run: pip install poetry
-      - name: Install dependencies
-        run: poetry install --with dev
-      - name: Build documentation
-        run: |
-          cd docs
-          poetry run sphinx-build -b html . _build/html
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: 'docs/_build/html'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
