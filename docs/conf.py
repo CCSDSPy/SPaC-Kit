@@ -1,13 +1,12 @@
 import importlib.metadata
+import os
+import sys
 
 # Project information
 metadata = importlib.metadata.metadata("spac-kit")
 project = "SPaC-Kit"
 author = metadata["Author"]
 release = metadata["Version"]
-
-import sys
-import os
 
 # Add the src directory to the path so Sphinx can find the modules
 sys.path.insert(0, os.path.abspath("../src"))
@@ -30,8 +29,10 @@ html_theme = "alabaster"
 html_theme_options = {
     "description": "A collection of tools for working with CCSDS Space Packets",
     "show_related": True,
-    "github_banner": False,
     "github_button": False,
     "github_user": "ccsdspy",
     "github_repo": "spac-kit",
 }
+
+html_static_path = ["_static"]
+html_css_files = ["spac-kit.css"]

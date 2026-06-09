@@ -1,0 +1,4 @@
+/* Make doc role links bold */
+a.reference.internal {
+    font-weight: bold;
+}
