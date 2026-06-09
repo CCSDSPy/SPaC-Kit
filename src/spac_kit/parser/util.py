@@ -24,9 +24,8 @@ def import_ccsds_packet_packages():
     Stolen from https://packaging.python.org/en/latest/guides/
     creating-and-discovering-plugins/#using-namespace-packages
 
-    Returns:
-        List of dictionaries with keys: 'packet' (the packet object),
-        'variable_name', 'module_path'
+    @return: list of dictionaries with keys: 'packet' (the packet object),
+             'variable_name', 'module_path'
     """
 
     # TODO: use a constant for ccsds.packets

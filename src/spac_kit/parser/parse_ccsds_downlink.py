@@ -92,18 +92,15 @@ class CalculatedChecksum(ccsdspy.converters.Converter):
     ):
         """Converter to add a calculated CRC to the parsed packets.
 
-        Args:
-            ccsds_version_number_array: from the CCSDS header
-            ccsds_packet_type_array: from the CCSDS header
-            ccsds_secondary_flag_array: from the CCSDS header
-            ccsds_apid_array: from the CCSDS header
-            ccsds_sequence_flag_array: from the CCSDS header
-            ccsds_sequence_count_array: from the CCSDS header
-            ccsds_packet_length_array: from the CCSDS header
-            body_array: body of the packet, without the trailing CRC.
-
-        Returns:
-            The array of calculated CRCs.
+        @param ccsds_version_number_array: from the CCSDS header
+        @param ccsds_packet_type_array: from the CCSDS header
+        @param ccsds_secondary_flag_array: from the CCSDS header
+        @param ccsds_apid_array: from the CCSDS header
+        @param ccsds_sequence_flag_array: from the CCSDS header
+        @param ccsds_sequence_count_array: from the CCSDS header
+        @param ccsds_packet_length_array: from the CCSDS header
+        @param body_array: body of the packet, without the trailing CRC.
+        @return: the array of calculated CRCs.
         """
         calculated_crc_array = []
 
@@ -343,22 +340,22 @@ def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
 
 
 def get_tab_name(apid, pkt_def, existing_names):
-    """Proposes a tab name for each APID or sub-packet structure of an APID.
+    """
+    Proposes a tab name for each APID or sub-packet structure of an APID.
 
     The tab name can be used as keys in the dictionary of DataFrames or as
     tab names in the Excel spreadsheet.
 
-    Args:
-        apid: APID
-        pkt_def: current packet definition.
-            Preferably, the packet definition has a "name" property which will be
-            used to name the tab. If not available the name of the class implementing
-            the packet structure definition is used.
-        existing_names: already used names, to avoid duplicates. A counter is added
-            to duplicate names.
-
-    Returns:
-        A unique tab name for the current APID and packet structure definition.
+    @param apid: APID
+    @param pkt_def: current packet definition.
+     preferably, the packet definition has a "name" property which will be
+     used to name the tab.
+     If not available the name of the class implementing the packet
+     structure definitionn is used.
+    @param existing_names: already used names, to avoid duplicates. A
+     counter is added to duplicate names.
+    @return: a unique tab name for the current APID and packet structure
+     definition.
     """
     if hasattr(pkt_def, "name"):
         name = f"{apid}.{pkt_def.name}"
