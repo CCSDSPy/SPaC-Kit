@@ -1,7 +1,7 @@
 .. _spac-kit-autodocs:
 
 **************************
-Documenting Packets
+Documentation Generation
 **************************
 
 SPaC-Kit includes a **Sphinx extension** that automatically generates comprehensive documentation for CCSDS packet definitions. This is the standout feature of SPaC-Kit, enabling missions to maintain living documentation that stays synchronized with packet definitions.

@@ -11,11 +11,11 @@ via **plugin** packages. Plugins should follow the `SPaC-Kit plugin template <ht
 Overview
 ========
 
-SPaC-Kit provides command-line tools and Python APIs for:
+SPaC-Kit provides command-line tools and Python APIs to:
 
-- :doc:`Parsing <parser>` CCSDS data files into Pandas DataFrames or Excel spreadsheets
-- :doc:`Generating <generator>` CCSDS packets with random or zero-initialized fields for testing
-- :doc:`Documenting <autodocs>` packet definitions automatically using a Sphinx extension
+- **Parse** CCSDS data files into Pandas DataFrames or Excel spreadsheets
+- **Generate** CCSDS packets with random or zero-initialized fields for testing
+- **Document** packet definitions automatically using a Sphinx extension
 
 .. admonition:: Acknowledgements
 
