@@ -14,8 +14,11 @@ CCSDS_HEADER_LENGTH_BYTES = 8
 def remove_bdsem_and_message_headers(f):
     """Removes extra headers provided by the BDSEM data generation.
 
-    @param f: file handler
-    @return: file handler
+    Args:
+        f: file handler
+
+    Returns:
+        File handler
     """
     buffer = io.BytesIO()
 
@@ -125,17 +128,19 @@ def strip_non_ccsds_headers(
     has_pkt_header: bool = False,
     has_json_header: bool = False,
 ):
-    """
-    Remove all cases of non CCSDS headers which can occur in
-    Europa-Clipper SDS inputs, mostly in test cases.
+    """Remove all cases of non CCSDS headers which can occur in Europa-Clipper SDS
+    inputs.
 
-    By default, we consider there is not packet non CCSDS packet markers or headers.
+    Mostly used in test cases.
 
-    @param filename: input binary filename
-    @param is_bdsem: file coming from BDSEM, else RAW
-    @param has_pkt_header:
-    @param has_json_header:
-    @return: the file handler where the CCSDS packets start
+    Args:
+        file_handler: input binary file handler
+        is_bdsem: file coming from BDSEM, else RAW
+        has_pkt_header: whether the file has packet headers
+        has_json_header: whether the file has a JSON header
+
+    Returns:
+        The file handler where the CCSDS packets start
     """
     if has_json_header:
         logger.info("Skip json header.")
