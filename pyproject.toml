@@ -41,17 +41,6 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/CCSDSPy/SPaC-Kit"
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "pylint~=4.0.5",
-    "pre-commit>=3.0.0"
-]
-
-# duplicate section to satisfy both Poetry and PEP 621 tools
 [dependency-groups]
 dev = [
     "pytest>=7.4.0",
@@ -59,7 +48,9 @@ dev = [
     "black>=23.0.0",
     "flake8>=6.0.0",
     "pylint~=4.0.5",
-    "pre-commit>=3.0.0"
+    "pre-commit>=3.0.0",
+    "sphinx (>=9.1.0,<10.0.0)",
+    "sphinx-autobuild (>=2025.8.25,<2026.0.0)"
 ]
 
 [project.scripts]

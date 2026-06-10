@@ -20,14 +20,15 @@ def compare(
     create_output: bool = False,
     create_spreadsheet: bool = False,
 ):
-    """Run paring and compare results with a reference.
+    """Run parsing and compare results with a reference.
 
-    @param local_dir:
-    @param is_bdsem:
-    @param has_pkt_header:
-    @param has_json_header:
-    @param create_output:
-    @return:
+    Args:
+        local_dir: local directory containing input file
+        is_bdsem: whether file is from BDSEM
+        has_pkt_header: whether file has packet headers
+        has_json_header: whether file has JSON header
+        create_output: whether to create output pickle file
+        create_spreadsheet: whether to create Excel spreadsheet
     """
     input_file = os.path.join(local_dir, "in.bin")
 
@@ -55,14 +56,17 @@ def compare(
 
 
 def recursive_compare(dfs, dfs_expected):
-    """Compare embedded dictionary of dictionaries of panda dataframes.
+    """Compare embedded dictionary of dictionaries of pandas dataframes.
 
-    Compare the keys and the actual dataframes.
+    Compare the keys and the actual dataframes. None should be missing and all should
+    match.
 
-    None should be missing and all should match.
-    @param dfs: dictionnary of dictionbaries of dataframe
-    @param dfs_expected: expected dictionnary of dictionnaries
-    @return: True is the pandas dataframe are identical at the same location as in the
+    Args:
+        dfs: dictionary of dictionaries of dataframes
+        dfs_expected: expected dictionary of dictionaries
+
+    Returns:
+        True if the pandas dataframes are identical at the same location
     """
     for k, df in dfs.items():
         logger.info("Compare dataframe %s", k)

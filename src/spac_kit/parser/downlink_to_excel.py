@@ -49,11 +49,10 @@ def add_tab_to_xlsx(dfs, writer, name=""):
 
     Only use the name in the leaf of the dictionary tree.
 
-    @param dfs: dictionary (of dictionary) of pandas dataframes or single
-     pandas dataframe
-    @param writer: pandas.ExcelWriter
-    @param name: name of the tab to be used, optional when
-    @return: Nothing
+    Args:
+        dfs: dictionary (of dictionary) of pandas dataframes or single pandas dataframe
+        writer: pandas.ExcelWriter
+        name: name of the tab to be used, optional
     """
     if isinstance(dfs, dict):
         for tab_name, df in dfs.items():
