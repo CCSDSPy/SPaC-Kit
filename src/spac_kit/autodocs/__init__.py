@@ -288,7 +288,7 @@ class SpacDocsDirective(Directive):
                 '<span class="field-name-tooltip" '
                 'style="margin-left:0.4em; vertical-align:middle; '
                 'display:inline-block; cursor:pointer;">'
-                '<img src="/_static/circle-info.svg" alt="info" '
+                '<img src="../_static/circle-info.svg" alt="info" '
                 'style="width:1em;height:1em;vertical-align:middle;'
                 'display:inline-block;">'
                 f'<span class="tooltiptext">{safe_desc}</span>'
