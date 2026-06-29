@@ -157,26 +157,29 @@ def list_packages(delimiter=None, long_format=False):
             print("-" * len(header))
 
             # Print each packet
+            apid_seen = set()
             for info in packet_info:
                 apid_str = str(info["apid"])
-                if long_format:
-                    line = (
-                        f"{apid_str:<{apid_width}}  "
-                        f"{info['packet']:<{packet_width}}  "
-                        f"{info['name']:<{name_width}}  "
-                        f"{info['description']:<{description_width}}  "
-                        f"{info['type']:<{type_width}}  "
-                        f"{info['fields']:<{fields_width}}  "
-                        f"{info['field_names']}"
-                    )
-                else:
-                    line = (
-                        f"{apid_str:<{apid_width}}  "
-                        f"{info['packet']:<{packet_width}}  "
-                        f"{info['name']:<{name_width}}  "
-                        f"{info['description']}"
-                    )
-                print(line)
+                if apid_str not in apid_seen:
+                    apid_seen.add(apid_str)
+                    if long_format:
+                        line = (
+                            f"{apid_str:<{apid_width}}  "
+                            f"{info['packet']:<{packet_width}}  "
+                            f"{info['name']:<{name_width}}  "
+                            f"{info['description']:<{description_width}}  "
+                            f"{info['type']:<{type_width}}  "
+                            f"{info['fields']:<{fields_width}}  "
+                            f"{info['field_names']}"
+                        )
+                    else:
+                        line = (
+                            f"{apid_str:<{apid_width}}  "
+                            f"{info['packet']:<{packet_width}}  "
+                            f"{info['name']:<{name_width}}  "
+                            f"{info['description']}"
+                        )
+                    print(line)
 
             print(f"\nTotal: {len(parsers)} packet definition(s)")
 
