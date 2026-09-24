@@ -168,3 +168,69 @@ class TestImportCcsdsPacketPackages:
                 ):
                     with pytest.raises(ImportError):
                         import_ccsds_packet_packages()
+
+    def test_import_with_extra_namespaces_argument(self):
+        """Test that extra_namespaces argument causes additional namespace to be walked."""
+        mock_ccsds = MagicMock()
+        mock_ccsds_packets = MagicMock()
+        mock_ccsds_packets.__path__ = []
+        mock_ccsds_packets.__name__ = "ccsds.packets"
+        mock_ccsds.packets = mock_ccsds_packets
+
+        mock_extra = MagicMock()
+        mock_extra.__path__ = []
+        mock_extra.__name__ = "my.packets"
+
+        with patch.dict(
+            "sys.modules", {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets}
+        ):
+            with patch("pkgutil.walk_packages", return_value=[]) as mock_walk:
+                with patch("importlib.import_module", return_value=mock_extra):
+                    import_ccsds_packet_packages(extra_namespaces=["my.packets"])
+                    assert mock_walk.call_count == 2
+
+    def test_import_with_extra_namespaces_env_var(self, monkeypatch):
+        """Test that EXTRA_PACKET_NAMESPACES env var adds extra namespaces."""
+        monkeypatch.setenv("EXTRA_PACKET_NAMESPACES", "my.packets,other.packets")
+
+        mock_ccsds = MagicMock()
+        mock_ccsds_packets = MagicMock()
+        mock_ccsds_packets.__path__ = []
+        mock_ccsds_packets.__name__ = "ccsds.packets"
+        mock_ccsds.packets = mock_ccsds_packets
+
+        mock_extra = MagicMock()
+        mock_extra.__path__ = []
+        mock_extra.__name__ = "my.packets"
+
+        with patch.dict(
+            "sys.modules", {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets}
+        ):
+            with patch("pkgutil.walk_packages", return_value=[]) as mock_walk:
+                with patch("importlib.import_module", return_value=mock_extra):
+                    import_ccsds_packet_packages()
+                    # ccsds.packets + my.packets + other.packets = 3 walks
+                    assert mock_walk.call_count == 3
+
+    def test_import_env_var_and_argument_combined(self, monkeypatch):
+        """Test that env var and argument extra namespaces are both used."""
+        monkeypatch.setenv("EXTRA_PACKET_NAMESPACES", "env.packets")
+
+        mock_ccsds = MagicMock()
+        mock_ccsds_packets = MagicMock()
+        mock_ccsds_packets.__path__ = []
+        mock_ccsds_packets.__name__ = "ccsds.packets"
+        mock_ccsds.packets = mock_ccsds_packets
+
+        mock_extra = MagicMock()
+        mock_extra.__path__ = []
+        mock_extra.__name__ = "arg.packets"
+
+        with patch.dict(
+            "sys.modules", {"ccsds": mock_ccsds, "ccsds.packets": mock_ccsds_packets}
+        ):
+            with patch("pkgutil.walk_packages", return_value=[]) as mock_walk:
+                with patch("importlib.import_module", return_value=mock_extra):
+                    import_ccsds_packet_packages(extra_namespaces=["arg.packets"])
+                    # ccsds.packets + arg.packets + env.packets = 3 walks
+                    assert mock_walk.call_count == 3

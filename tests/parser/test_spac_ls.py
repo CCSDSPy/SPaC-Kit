@@ -531,6 +531,24 @@ class TestListPackages:
                 in lines[1]
             )
 
+    def test_list_packages_passes_extra_namespaces(self):
+        """Test that list_packages passes extra_namespaces to import_ccsds_packet_packages."""
+        mock_packet = create_mock_packet(
+            "TestPacket",
+            "ccsds.packets.test",
+            ccsdspy.FixedLength,
+            100,
+            "Test",
+            "Test description",
+        )
+
+        with patch(
+            "spac_kit.parser.spac_ls.import_ccsds_packet_packages",
+            return_value=[mock_packet],
+        ) as mock_import:
+            list_packages(extra_namespaces=["my.packets"])
+            mock_import.assert_called_once_with(extra_namespaces=["my.packets"])
+
 
 class TestMain:
     """Tests for main CLI entry point."""
@@ -639,3 +657,26 @@ class TestMain:
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
+
+    def test_main_with_extra_packet_namespaces(self):
+        """Test main function passes --extra-packet-namespaces to list_packages."""
+        mock_packet = create_mock_packet(
+            "TestPacket",
+            "ccsds.packets.test",
+            ccsdspy.FixedLength,
+            100,
+            "Test",
+            "Test description",
+        )
+
+        with patch(
+            "spac_kit.parser.spac_ls.import_ccsds_packet_packages",
+            return_value=[mock_packet],
+        ) as mock_import:
+            with patch(
+                "sys.argv", ["spac-ls", "--extra-packet-namespaces", "my.packets"]
+            ):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+            mock_import.assert_called_once_with(extra_namespaces=["my.packets"])

@@ -111,11 +111,22 @@ def main():  # pylint: disable=too-many-locals
             "(default: random)"
         ),
     )
+    parser.add_argument(
+        "--extra-packet-namespaces",
+        type=str,
+        nargs="+",
+        help="Additional Python namespaces to search for CCSDS packet definitions, "
+        "in addition to the default ccsds.packets namespace. "
+        "Can also be set via the EXTRA_PACKET_NAMESPACES environment variable "
+        "(comma-separated).",
+    )
 
     args = parser.parse_args()
 
     try:
-        packets = import_ccsds_packet_packages()
+        packets = import_ccsds_packet_packages(
+            extra_namespaces=args.extra_packet_namespaces
+        )
     except ImportError:
         print(
             "Error: No CCSDS packet definitions found. "

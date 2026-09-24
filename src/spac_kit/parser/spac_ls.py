@@ -132,7 +132,7 @@ def _print_table(packet_info, total, long_format):  # pylint: disable=too-many-l
 
 
 # pylint: disable=too-many-branches
-def list_packages(delimiter=None, long_format=False):
+def list_packages(delimiter=None, long_format=False, extra_namespaces=None):
     """List all available CCSDS packet packages.
 
     Args:
@@ -140,9 +140,10 @@ def list_packages(delimiter=None, long_format=False):
                    (e.g., ',' for CSV, '\t' for TSV)
         long_format: If True, display additional fields like
                      packet type and field information
+        extra_namespaces: Additional Python namespace strings to search
     """
     try:
-        parsers = import_ccsds_packet_packages()
+        parsers = import_ccsds_packet_packages(extra_namespaces=extra_namespaces)
 
         if not parsers:
             print("No CCSDS packet packages found.")
@@ -213,6 +214,15 @@ Examples:
         help="Output as delimited format with specified delimiter "
         "(e.g., ',' for CSV, '\\t' for TSV)",
     )
+    parser.add_argument(
+        "--extra-packet-namespaces",
+        type=str,
+        nargs="+",
+        help="Additional Python namespaces to search for CCSDS packet definitions, "
+        "in addition to the default ccsds.packets namespace. "
+        "Can also be set via the EXTRA_PACKET_NAMESPACES environment variable "
+        "(comma-separated).",
+    )
     return parser
 
 
@@ -221,7 +231,13 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    sys.exit(list_packages(delimiter=args.delimiter, long_format=args.long))
+    sys.exit(
+        list_packages(
+            delimiter=args.delimiter,
+            long_format=args.long,
+            extra_namespaces=args.extra_packet_namespaces,
+        )
+    )
 
 
 if __name__ == "__main__":
