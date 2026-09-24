@@ -68,7 +68,70 @@ def format_packet_info(packet_info, long_format=False):
     return result
 
 
-# pylint: disable=too-many-locals,too-many-branches
+def _print_delimited(packet_info, delimiter, long_format):
+    headers = ["APID", "PACKET", "NAME", "DESCRIPTION"]
+    if long_format:
+        headers.extend(["TYPE", "FIELDS", "FIELD_NAMES"])
+    print(delimiter.join(headers))
+    for info in packet_info:
+        row = [str(info["apid"]), info["packet"], info["name"], info["description"]]
+        if long_format:
+            row.extend([info["type"], str(info["fields"]), info["field_names"]])
+        print(delimiter.join(row))
+
+
+def _print_table(packet_info, total, long_format):  # pylint: disable=too-many-locals
+    apid_width = max(max(len(str(p["apid"])) for p in packet_info), len("APID"))
+    packet_width = max(max(len(p["packet"]) for p in packet_info), len("PACKET"))
+    name_width = max(max(len(p["name"]) for p in packet_info), len("NAME"))
+    description_width = max(
+        max(len(p["description"]) for p in packet_info), len("DESCRIPTION")
+    )
+
+    if long_format:
+        type_width = max(max(len(p["type"]) for p in packet_info), len("TYPE"))
+        fields_width = max(
+            max(len(str(p["fields"])) for p in packet_info), len("FIELDS")
+        )
+        header = (
+            f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  "
+            f"{'NAME':<{name_width}}  {'DESCRIPTION':<{description_width}}  "
+            f"{'TYPE':<{type_width}}  {'FIELDS':<{fields_width}}  FIELD_NAMES"
+        )
+    else:
+        header = (
+            f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  "
+            f"{'NAME':<{name_width}}  DESCRIPTION"
+        )
+
+    print(header)
+    print("-" * len(header))
+
+    apid_seen = set()
+    for info in packet_info:
+        apid_str = str(info["apid"])
+        if apid_str in apid_seen:
+            continue
+        apid_seen.add(apid_str)
+        if long_format:
+            line = (
+                f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  "
+                f"{info['name']:<{name_width}}  "
+                f"{info['description']:<{description_width}}  "
+                f"{info['type']:<{type_width}}  {info['fields']:<{fields_width}}  "
+                f"{info['field_names']}"
+            )
+        else:
+            line = (
+                f"{apid_str:<{apid_width}}  {info['packet']:<{packet_width}}  "
+                f"{info['name']:<{name_width}}  {info['description']}"
+            )
+        print(line)
+
+    print(f"\nTotal: {total} packet definition(s)")
+
+
+# pylint: disable=too-many-branches
 def list_packages(delimiter=None, long_format=False):
     """List all available CCSDS packet packages.
 
@@ -100,88 +163,9 @@ def list_packages(delimiter=None, long_format=False):
         )
 
         if delimiter:
-            # CSV/delimited output format
-            headers = ["APID", "PACKET", "NAME", "DESCRIPTION"]
-            if long_format:
-                headers.extend(["TYPE", "FIELDS", "FIELD_NAMES"])
-            print(delimiter.join(headers))
-
-            for info in packet_info:
-                row = [
-                    str(info["apid"]),
-                    info["packet"],
-                    info["name"],
-                    info["description"],
-                ]
-                if long_format:
-                    row.extend([info["type"], str(info["fields"]), info["field_names"]])
-                print(delimiter.join(row))
+            _print_delimited(packet_info, delimiter, long_format)
         else:
-            # Table format output
-            # Calculate column widths
-            apid_width = max(len(str(p["apid"])) for p in packet_info)
-            apid_width = max(apid_width, len("APID"))
-
-            packet_width = max(len(p["packet"]) for p in packet_info)
-            packet_width = max(packet_width, len("PACKET"))
-
-            name_width = max(len(p["name"]) for p in packet_info)
-            name_width = max(name_width, len("NAME"))
-
-            description_width = max(len(p["description"]) for p in packet_info)
-            description_width = max(description_width, len("DESCRIPTION"))
-
-            if long_format:
-                type_width = max(len(p["type"]) for p in packet_info)
-                type_width = max(type_width, len("TYPE"))
-
-                fields_width = max(len(str(p["fields"])) for p in packet_info)
-                fields_width = max(fields_width, len("FIELDS"))
-
-                # Print header
-                header = (
-                    f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  "
-                    f"{'NAME':<{name_width}}  "
-                    f"{'DESCRIPTION':<{description_width}}  "
-                    f"{'TYPE':<{type_width}}  "
-                    f"{'FIELDS':<{fields_width}}  FIELD_NAMES"
-                )
-            else:
-                # Print header
-                header = (
-                    f"{'APID':<{apid_width}}  {'PACKET':<{packet_width}}  "
-                    f"{'NAME':<{name_width}}  DESCRIPTION"
-                )
-
-            print(header)
-            print("-" * len(header))
-
-            # Print each packet
-            apid_seen = set()
-            for info in packet_info:
-                apid_str = str(info["apid"])
-                if apid_str not in apid_seen:
-                    apid_seen.add(apid_str)
-                    if long_format:
-                        line = (
-                            f"{apid_str:<{apid_width}}  "
-                            f"{info['packet']:<{packet_width}}  "
-                            f"{info['name']:<{name_width}}  "
-                            f"{info['description']:<{description_width}}  "
-                            f"{info['type']:<{type_width}}  "
-                            f"{info['fields']:<{fields_width}}  "
-                            f"{info['field_names']}"
-                        )
-                    else:
-                        line = (
-                            f"{apid_str:<{apid_width}}  "
-                            f"{info['packet']:<{packet_width}}  "
-                            f"{info['name']:<{name_width}}  "
-                            f"{info['description']}"
-                        )
-                    print(line)
-
-            print(f"\nTotal: {len(parsers)} packet definition(s)")
+            _print_table(packet_info, len(parsers), long_format)
 
         return 0
 
