@@ -309,7 +309,7 @@ class TestListPackages:
 
             assert result == 1
             captured = capsys.readouterr()
-            assert "Error: Unable to import ccsds.packets namespace" in captured.err
+            assert "Error: Unable to import packet namespace" in captured.err
 
     def test_list_packages_handles_general_exception(self, capsys):
         """Test list_packages when a general exception occurs."""

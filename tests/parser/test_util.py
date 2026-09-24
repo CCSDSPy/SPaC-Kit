@@ -169,6 +169,26 @@ class TestImportCcsdsPacketPackages:
                     with pytest.raises(ImportError):
                         import_ccsds_packet_packages()
 
+    def test_import_raises_when_default_namespace_missing_and_no_extras(self):
+        """Test that ImportError propagates when ccsds.packets missing and no extras."""
+        with patch.dict("sys.modules", {"ccsds": None, "ccsds.packets": None}):
+            with pytest.raises(ImportError):
+                import_ccsds_packet_packages()
+
+    def test_import_succeeds_when_default_namespace_missing_but_extras_provided(self):
+        """Test that missing ccsds.packets is tolerated when extra namespaces are given."""
+        mock_extra = MagicMock()
+        mock_extra.__path__ = []
+        mock_extra.__name__ = "my.packets"
+
+        with patch.dict("sys.modules", {"ccsds": None, "ccsds.packets": None}):
+            with patch("pkgutil.walk_packages", return_value=[]):
+                with patch("importlib.import_module", return_value=mock_extra):
+                    parsers = import_ccsds_packet_packages(
+                        extra_namespaces=["my.packets"]
+                    )
+                    assert parsers == []
+
     def test_import_with_extra_namespaces_argument(self):
         """Test that extra_namespaces argument causes additional namespace to be walked."""
         mock_ccsds = MagicMock()

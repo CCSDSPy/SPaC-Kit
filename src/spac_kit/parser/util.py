@@ -35,15 +35,21 @@ def import_ccsds_packet_packages(extra_namespaces=None):
         'variable_name', 'module_path'
     """
 
-    # TODO: use a constant for ccsds.packets
-    import ccsds.packets  # pylint: disable=import-outside-toplevel,import-error
-
-    namespace_modules = [ccsds.packets]
-
     namespaces_to_add = list(extra_namespaces or [])
     env_val = os.environ.get("EXTRA_PACKET_NAMESPACES", "")
     if env_val:
         namespaces_to_add.extend(ns.strip() for ns in env_val.split(",") if ns.strip())
+
+    namespace_modules = []
+
+    try:
+        # TODO: use a constant for ccsds.packets
+        import ccsds.packets  # pylint: disable=import-outside-toplevel,import-error
+
+        namespace_modules.append(ccsds.packets)
+    except ImportError:
+        if not namespaces_to_add:
+            raise
 
     for ns_name in namespaces_to_add:
         namespace_modules.append(

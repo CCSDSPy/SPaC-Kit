@@ -171,7 +171,7 @@ def list_packages(delimiter=None, long_format=False, extra_namespaces=None):
         return 0
 
     except ImportError as e:
-        print(f"Error: Unable to import ccsds.packets namespace: {e}", file=sys.stderr)
+        print(f"Error: Unable to import packet namespace: {e}", file=sys.stderr)
         print(
             "Ensure that packet definitions are installed and available.",
             file=sys.stderr,
