@@ -19,6 +19,19 @@ default_pkt = ccsdspy.VariableLength(
 )
 
 
+def add_extra_namespaces_argument(parser):
+    """Add --extra-packet-namespaces argument to an argparse ArgumentParser."""
+    parser.add_argument(
+        "--extra-packet-namespaces",
+        type=str,
+        nargs="+",
+        help="Additional Python namespaces to search for CCSDS packet definitions, "
+        "in addition to the default ccsds.packets namespace. "
+        "Can also be set via the EXTRA_PACKET_NAMESPACES environment variable "
+        "(comma-separated).",
+    )
+
+
 def import_ccsds_packet_packages(extra_namespaces=None):
     """Import subpackages of ccsds.packets containing CCSDSpy definitions.
 

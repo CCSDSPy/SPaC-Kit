@@ -6,6 +6,7 @@ import os.path
 import pandas as pd
 from spac_kit.parser.parse_ccsds_downlink import parse_ccsds_file
 from spac_kit.parser.remove_non_ccsds_headers import strip_non_ccsds_headers
+from spac_kit.parser.util import add_extra_namespaces_argument
 
 logger = logging.getLogger(__name__)
 
@@ -40,16 +41,7 @@ def get_parser():
         help="Check if CRC in packet matches with the one calculateed, "
         "return the calculated CRC in the spreadsheet next to the one of the packet.",
     )
-    parser.add_argument(
-        "--extra-packet-namespaces",
-        type=str,
-        nargs="+",
-        help="Additional Python namespaces to search for CCSDS packet definitions, "
-        "in addition to the default ccsds.packets namespace. "
-        "Can also be set via the EXTRA_PACKET_NAMESPACES environment variable "
-        "(comma-separated).",
-    )
-
+    add_extra_namespaces_argument(parser)
     return parser
 
 

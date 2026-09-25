@@ -6,6 +6,7 @@ from collections import Counter
 import numpy as np
 from scipy import stats
 from spac_kit.generator.packet_generator import PacketGenerator
+from spac_kit.parser.util import add_extra_namespaces_argument
 from spac_kit.parser.util import import_ccsds_packet_packages
 
 
@@ -111,15 +112,7 @@ def main():  # pylint: disable=too-many-locals
             "(default: random)"
         ),
     )
-    parser.add_argument(
-        "--extra-packet-namespaces",
-        type=str,
-        nargs="+",
-        help="Additional Python namespaces to search for CCSDS packet definitions, "
-        "in addition to the default ccsds.packets namespace. "
-        "Can also be set via the EXTRA_PACKET_NAMESPACES environment variable "
-        "(comma-separated).",
-    )
+    add_extra_namespaces_argument(parser)
 
     args = parser.parse_args()
 
