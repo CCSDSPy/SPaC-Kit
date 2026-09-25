@@ -2,6 +2,7 @@
 import argparse
 import sys
 
+from spac_kit.parser.util import add_extra_namespaces_argument
 from spac_kit.parser.util import import_ccsds_packet_packages
 
 
@@ -132,7 +133,7 @@ def _print_table(packet_info, total, long_format):  # pylint: disable=too-many-l
 
 
 # pylint: disable=too-many-branches
-def list_packages(delimiter=None, long_format=False):
+def list_packages(delimiter=None, long_format=False, extra_namespaces=None):
     """List all available CCSDS packet packages.
 
     Args:
@@ -140,9 +141,10 @@ def list_packages(delimiter=None, long_format=False):
                    (e.g., ',' for CSV, '\t' for TSV)
         long_format: If True, display additional fields like
                      packet type and field information
+        extra_namespaces: Additional Python namespace strings to search
     """
     try:
-        parsers = import_ccsds_packet_packages()
+        parsers = import_ccsds_packet_packages(extra_namespaces=extra_namespaces)
 
         if not parsers:
             print("No CCSDS packet packages found.")
@@ -170,7 +172,7 @@ def list_packages(delimiter=None, long_format=False):
         return 0
 
     except ImportError as e:
-        print(f"Error: Unable to import ccsds.packets namespace: {e}", file=sys.stderr)
+        print(f"Error: Unable to import packet namespace: {e}", file=sys.stderr)
         print(
             "Ensure that packet definitions are installed and available.",
             file=sys.stderr,
@@ -213,6 +215,7 @@ Examples:
         help="Output as delimited format with specified delimiter "
         "(e.g., ',' for CSV, '\\t' for TSV)",
     )
+    add_extra_namespaces_argument(parser)
     return parser
 
 
@@ -221,7 +224,13 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    sys.exit(list_packages(delimiter=args.delimiter, long_format=args.long))
+    sys.exit(
+        list_packages(
+            delimiter=args.delimiter,
+            long_format=args.long,
+            extra_namespaces=args.extra_packet_namespaces,
+        )
+    )
 
 
 if __name__ == "__main__":

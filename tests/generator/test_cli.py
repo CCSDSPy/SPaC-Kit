@@ -441,6 +441,37 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "No packets found" in captured.err
 
+    @patch("spac_kit.generator.cli.import_ccsds_packet_packages")
+    @patch("builtins.open")
+    def test_extra_packet_namespaces_passed_to_import(
+        self, mock_open, mock_import, capsys
+    ):
+        """Test that --extra-packet-namespaces is forwarded to import_ccsds_packet_packages."""
+        mock_packet = MagicMock()
+        mock_packet.apid = 100
+        mock_packet.name = "TestPacket"
+        mock_packet._fields = []
+
+        mock_import.return_value = [
+            {
+                "packet": mock_packet,
+                "variable_name": "test1",
+                "module_path": "test.module",
+            }
+        ]
+
+        mock_file = MagicMock()
+        mock_open.return_value.__enter__.return_value = mock_file
+
+        with patch.object(
+            sys,
+            "argv",
+            ["cli", "--output", "test.bin", "--extra-packet-namespaces", "my.packets"],
+        ):
+            main()
+
+        mock_import.assert_called_once_with(extra_namespaces=["my.packets"])
+
     def test_apid_and_module_mutually_exclusive(self, capsys):
         """Test that --apid and --module cannot be used together."""
         with patch.object(

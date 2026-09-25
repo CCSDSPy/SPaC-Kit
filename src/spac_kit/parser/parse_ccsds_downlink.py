@@ -194,7 +194,7 @@ def calculate_crc(f, crc_size_bytes=2):
         raise CRCNotCalculatedError("Unable to parse packet to calculate CRC") from e
 
 
-def get_packet_definitions():
+def get_packet_definitions(extra_namespaces=None):
     """
     Select packet definitions which will be parsed in the first round or
     second round, as a refinement for some APIDs.
@@ -209,7 +209,7 @@ def get_packet_definitions():
     first_round_parsers = {}
     second_round_parsers = {}
 
-    import_ccsds_packet_packages()
+    import_ccsds_packet_packages(extra_namespaces=extra_namespaces)
 
     for obj in gc.get_objects():
         if isinstance(
@@ -272,9 +272,13 @@ def distribute_packets(keyss, stream1):
 
 
 # pylint: disable=too-many-locals,too-many-nested-blocks
-def parse_ccsds_file(ccsds_file: str, do_calculate_crc: bool = False):
+def parse_ccsds_file(
+    ccsds_file: str, do_calculate_crc: bool = False, extra_namespaces=None
+):
     """Parse a pure CCSDS binary file (only CCSDS packets)."""
-    apid_packets, apid_multi_pkt = get_packet_definitions()
+    apid_packets, apid_multi_pkt = get_packet_definitions(
+        extra_namespaces=extra_namespaces
+    )
     logger.info("Split input file per APIDs")
     stream_by_apid = ccsdspy.utils.split_by_apid(ccsds_file)
     dfs = {}

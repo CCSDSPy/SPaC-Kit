@@ -6,6 +6,7 @@ from collections import Counter
 import numpy as np
 from scipy import stats
 from spac_kit.generator.packet_generator import PacketGenerator
+from spac_kit.parser.util import add_extra_namespaces_argument
 from spac_kit.parser.util import import_ccsds_packet_packages
 
 
@@ -111,11 +112,14 @@ def main():  # pylint: disable=too-many-locals
             "(default: random)"
         ),
     )
+    add_extra_namespaces_argument(parser)
 
     args = parser.parse_args()
 
     try:
-        packets = import_ccsds_packet_packages()
+        packets = import_ccsds_packet_packages(
+            extra_namespaces=args.extra_packet_namespaces
+        )
     except ImportError:
         print(
             "Error: No CCSDS packet definitions found. "

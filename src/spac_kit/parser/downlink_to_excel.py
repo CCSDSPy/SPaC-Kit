@@ -6,6 +6,7 @@ import os.path
 import pandas as pd
 from spac_kit.parser.parse_ccsds_downlink import parse_ccsds_file
 from spac_kit.parser.remove_non_ccsds_headers import strip_non_ccsds_headers
+from spac_kit.parser.util import add_extra_namespaces_argument
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def get_parser():
         help="Check if CRC in packet matches with the one calculateed, "
         "return the calculated CRC in the spreadsheet next to the one of the packet.",
     )
-
+    add_extra_namespaces_argument(parser)
     return parser
 
 
@@ -68,9 +69,13 @@ def export_dfs_to_xlsx(dfs, filename1):
         add_tab_to_xlsx(dfs, writer)
 
 
-def export_ccsds_to_excel(ccsds_file, output_filename, do_calculate_crc):
+def export_ccsds_to_excel(
+    ccsds_file, output_filename, do_calculate_crc, extra_namespaces=None
+):
     """Export a binary file of CCSDS packets into an Excel file."""
-    dfs = parse_ccsds_file(ccsds_file, do_calculate_crc)
+    dfs = parse_ccsds_file(
+        ccsds_file, do_calculate_crc, extra_namespaces=extra_namespaces
+    )
     export_dfs_to_xlsx(dfs, output_filename)
 
 
@@ -90,7 +95,12 @@ def main():
 
         file_base, _ = os.path.splitext(args.file)
         xlsx_filename = file_base + ".xlsx"
-        export_ccsds_to_excel(ccsds_file, xlsx_filename, args.calculate_crc)
+        export_ccsds_to_excel(
+            ccsds_file,
+            xlsx_filename,
+            args.calculate_crc,
+            extra_namespaces=args.extra_packet_namespaces,
+        )
 
 
 if __name__ == "__main__":
